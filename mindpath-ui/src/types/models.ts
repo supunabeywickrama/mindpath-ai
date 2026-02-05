@@ -25,6 +25,17 @@ export type UserSettings = {
 export type AppState = {
   mood: MoodEntry[];
   habits: Habit[];
+  journal: JournalEntry[];
   plan: Plan;
   settings: UserSettings;
 };
+
+export type JournalEntry = {
+  id: string;
+  createdAt: string; // ISO
+  title: string;
+  content: string;
+  mood?: number;      // 0-10 optional
+  emotions: string[]; // optional tags
+};
+

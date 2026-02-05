@@ -24,11 +24,34 @@ export function seedState(): AppState {
       { id: crypto.randomUUID(), name: "Morning sunlight", goal: "5 minutes", completedDates: [] },
       { id: crypto.randomUUID(), name: "Drink water", goal: "6 glasses", completedDates: [] }
     ],
+
     plan: "free",
+
     settings: {
       theme: "dark",
       checkinTimes: [{ hour: 9, minute: 0 }, { hour: 19, minute: 0 }],
       emailWeeklySummary: true
-    }
+    },
+
+    journal: [
+  {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    title: "A small win today",
+    content: "I managed to get out of bed and take a short walk. Not perfect, but progress.",
+    mood: 5,
+    emotions: ["tired", "okay"],
+  },
+  {
+    id: crypto.randomUUID(),
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    title: "Heavy morning",
+    content: "Woke up feeling low. I tried breathing for one minute and it helped a bit.",
+    mood: 3,
+    emotions: ["sad", "stressed"],
+  },
+],
+
+
   };
 }

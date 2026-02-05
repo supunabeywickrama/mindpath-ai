@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AppState, MoodEntry, Habit, Plan, UserSettings } from "../types/models";
+import type { AppState, MoodEntry, Habit, Plan, UserSettings, JournalEntry } from "../types/models";
 import { seedState } from "../mock/seed";
+
 
 const KEY = "mindpath_state_v1";
 
@@ -20,7 +21,20 @@ export function useAppStore() {
 
   const api = useMemo(() => ({
     state,
-
+    
+    addJournal(entry: Omit<JournalEntry, "id" | "createdAt">) {
+      const withId: JournalEntry = {
+         ...entry,
+         id: crypto.randomUUID(),
+         createdAt: new Date().toISOString(),
+      };
+      setState(s => ({ ...s, journal: [withId, ...(s.journal ?? [])] }));
+    },
+    
+    deleteJournal(id: string) {
+      setState(s => ({ ...s, journal: (s.journal ?? []).filter(j => j.id !== id) }));
+    },
+    
     addMood(entry: Omit<MoodEntry, "id">) {
       const withId: MoodEntry = { ...entry, id: crypto.randomUUID() };
       setState(s => ({ ...s, mood: [...s.mood, withId] }));
