@@ -1,11 +1,21 @@
-from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class Settings(BaseModel):
+class Settings:
     app_name: str = os.getenv("APP_NAME", "MindPath API")
-    cors_origin: str = os.getenv("CORS_ORIGIN", "http://localhost:5173")
+    env: str = os.getenv("ENV", "dev")
+
+    cors_origins: list[str] = [
+        x.strip()
+        for x in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+        if x.strip()
+    ]
+
+    database_url: str = os.getenv(
+         "DATABASE_URL",
+         "postgresql+psycopg2://postgres:postgres@localhost:5432/mindpath"
+    )
 
 settings = Settings()

@@ -1,23 +1,39 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
-from datetime import datetime
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from app.deps import get_db
+from app.auth_dev import get_current_user
+from app.models import MoodEntry, User
+from app.schemas import MoodCreate, MoodOut
 
-router = APIRouter()
+router = APIRouter(prefix="/moods", tags=["moods"])
 
-class MoodEntry(BaseModel):
-    mood: int  # 0-10
-    note: str | None = None
-    created_at: datetime | None = None
+@router.get("", response_model=list[MoodOut])
+def list_moods(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    q = (
+        select(MoodEntry)
+        .where(MoodEntry.user_id == user.id)
+        .order_by(MoodEntry.created_at.desc())
+    )
+    return list(db.scalars(q).all())
 
-# TEMP in-memory storage (later: DB)
-MOODS: list[MoodEntry] = []
-
-@router.post("/mood")
-def add_mood(entry: MoodEntry):
-    entry.created_at = datetime.utcnow()
-    MOODS.append(entry)
-    return {"ok": True, "entry": entry}
-
-@router.get("/mood")
-def list_moods():
-    return {"items": MOODS}
+@router.post("", response_model=MoodOut)
+def create_mood(
+    payload: MoodCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    entry = MoodEntry(
+        user_id=user.id,
+        mood=payload.mood,
+        emotions=payload.emotions,
+        tags=payload.tags,
+        note=payload.note,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
