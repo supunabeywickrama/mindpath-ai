@@ -1,9 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import { useAppStore } from "../store/useAppStore";
 import { Search, Trash2, BookText, Sparkles } from "lucide-react";
 import { mockJournalAi, type AiMode } from "../mock/ai";
+import {
+  listJournal,
+  createJournal,
+  deleteJournal,
+  type JournalOut,
+} from "../lib/api";
 
 const EMOTIONS = ["sad", "anxious", "tired", "numb", "okay", "hopeful", "stressed"];
 
@@ -13,34 +18,56 @@ function fmtTime(iso: string) {
 }
 
 export default function Journal() {
-  const { state, addJournal, deleteJournal } = useAppStore();
-
+  // Editor state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [mood, setMood] = useState<number | "">("");
   const [emotions, setEmotions] = useState<string[]>([]);
 
+  // List + selection
   const [q, setQ] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
+  // Data from backend
+  const [itemsRaw, setItemsRaw] = useState<JournalOut[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string>("");
+
+  // AI panel state
   const [aiOpen, setAiOpen] = useState(false);
   const [aiMode, setAiMode] = useState<AiMode>("summarize");
   const [aiOutput, setAiOutput] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
 
+  async function refresh() {
+    setErr("");
+    setLoading(true);
+    try {
+      const data = await listJournal();
+      setItemsRaw(data);
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load journal.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
   const items = useMemo(() => {
-    const all = [...(state.journal ?? [])].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt)
-    );
+    const all = [...itemsRaw].sort((a, b) => b.created_at.localeCompare(a.created_at));
     if (!q.trim()) return all;
     const s = q.toLowerCase();
     return all.filter(
       (j) =>
         j.title.toLowerCase().includes(s) ||
         j.content.toLowerCase().includes(s) ||
-        j.emotions.some((e) => e.toLowerCase().includes(s))
+        (j.emotions ?? []).some((e) => e.toLowerCase().includes(s))
     );
-  }, [state.journal, q]);
+  }, [itemsRaw, q]);
 
   const selected = useMemo(
     () => (selectedId ? items.find((x) => x.id === selectedId) ?? null : null),
@@ -48,30 +75,53 @@ export default function Journal() {
   );
 
   function toggleEmotion(e: string) {
-    setEmotions((prev) =>
-      prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]
-    );
+    setEmotions((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
   }
 
-  function save() {
+  async function save() {
     if (!content.trim()) return;
+    setErr("");
+    setSaving(true);
+    try {
+      const created = await createJournal({
+        title: title.trim() || "Untitled",
+        content: content.trim(),
+        mood: mood === "" ? null : mood,
+        emotions,
+      });
 
-    addJournal({
-      title: title.trim() || "Untitled",
-      content: content.trim(),
-      mood: mood === "" ? undefined : mood,
-      emotions,
-    });
+      setItemsRaw((prev) => [created, ...prev]);
 
-    setTitle("");
-    setContent("");
-    setMood("");
-    setEmotions([]);
-    setSelectedId(null);
+      setTitle("");
+      setContent("");
+      setMood("");
+      setEmotions([]);
+      setSelectedId(null);
 
-    setAiOpen(false);
-    setAiOutput("");
-    setAiLoading(false);
+      setAiOpen(false);
+      setAiOutput("");
+      setAiLoading(false);
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to save entry.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(entryId: number) {
+    setErr("");
+    try {
+      await deleteJournal(entryId);
+      setItemsRaw((prev) => prev.filter((x) => x.id !== entryId));
+      if (selectedId === entryId) {
+        setSelectedId(null);
+        setAiOpen(false);
+        setAiOutput("");
+        setAiLoading(false);
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to delete entry.");
+    }
   }
 
   async function runAi(mode: AiMode) {
@@ -93,10 +143,22 @@ export default function Journal() {
         <div>
           <h1 className="text-2xl font-semibold">Journal</h1>
           <p className="text-zinc-400 mt-1">
-            Write freely. Short notes are enough. Your entries stay local for now.
+            Write freely. Short notes are enough. Entries are now saved in your database.
           </p>
         </div>
+
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={refresh}>
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {err && (
+        <div className="rounded-2xl bg-red-500/10 border border-red-400/20 px-4 py-3 text-sm text-red-200">
+          {err}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left: create entry */}
@@ -107,7 +169,7 @@ export default function Journal() {
             right={
               <div className="hidden md:flex items-center gap-2 text-xs text-zinc-500">
                 <BookText size={14} />
-                Private (local)
+                Synced (DB)
               </div>
             }
           >
@@ -179,7 +241,9 @@ export default function Journal() {
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={save}>Save entry</Button>
+                <Button onClick={save} disabled={saving}>
+                  {saving ? "Saving..." : "Save entry"}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -202,7 +266,7 @@ export default function Journal() {
 
         {/* Right: list + reader */}
         <div className="lg:col-span-7 space-y-4">
-          <Card title="Entries" subtitle={`${items.length} saved`}>
+          <Card title="Entries" subtitle={loading ? "Loading..." : `${items.length} saved`}>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search size={16} className="absolute left-3 top-3 text-zinc-500" />
@@ -242,7 +306,7 @@ export default function Journal() {
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">{fmtTime(j.createdAt)}</div>
+                  <div className="text-xs text-zinc-500 mt-1">{fmtTime(j.created_at)}</div>
                   <div className="text-sm text-zinc-300 mt-2 line-clamp-2">{j.content}</div>
 
                   {j.emotions?.length > 0 && (
@@ -288,7 +352,6 @@ export default function Journal() {
                   onClick={() => selected && runAi("summarize")}
                   disabled={!selected}
                   className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
-                  title="Summarize"
                 >
                   <Sparkles size={16} />
                   Summarize
@@ -298,7 +361,6 @@ export default function Journal() {
                   onClick={() => selected && runAi("rewrite")}
                   disabled={!selected}
                   className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
-                  title="Rewrite gently"
                 >
                   <Sparkles size={16} />
                   Rewrite
@@ -308,7 +370,6 @@ export default function Journal() {
                   onClick={() => selected && runAi("plan")}
                   disabled={!selected}
                   className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
-                  title="Turn into a small plan"
                 >
                   <Sparkles size={16} />
                   Plan
@@ -316,13 +377,7 @@ export default function Journal() {
 
                 {selected && (
                   <button
-                    onClick={() => {
-                      deleteJournal(selected.id);
-                      setSelectedId(null);
-                      setAiOpen(false);
-                      setAiOutput("");
-                      setAiLoading(false);
-                    }}
+                    onClick={() => remove(selected.id)}
                     className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2"
                     title="Delete entry"
                   >
@@ -335,13 +390,11 @@ export default function Journal() {
 
             <div className="px-5 py-4">
               {!selected ? (
-                <div className="text-sm text-zinc-400">
-                  Select an entry from the list to read it here.
-                </div>
+                <div className="text-sm text-zinc-400">Select an entry to read it here.</div>
               ) : (
                 <div className="space-y-3">
                   <div className="text-xl font-semibold">{selected.title}</div>
-                  <div className="text-xs text-zinc-500">{fmtTime(selected.createdAt)}</div>
+                  <div className="text-xs text-zinc-500">{fmtTime(selected.created_at)}</div>
 
                   <div className="flex flex-wrap gap-2">
                     {typeof selected.mood === "number" && (
@@ -375,14 +428,12 @@ export default function Journal() {
                             </span>
                           </div>
                           <div className="text-xs text-zinc-500 mt-1">
-                            Mock now. Later: FastAPI + RAG + safety rules.
+                            Mock now. Later: FastAPI + OpenAI + RAG + safety rules.
                           </div>
                         </div>
 
                         <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(aiOutput || "");
-                          }}
+                          onClick={() => navigator.clipboard.writeText(aiOutput || "")}
                           className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
                         >
                           Copy
@@ -406,7 +457,6 @@ export default function Journal() {
                             if (aiOutput) setContent(aiOutput);
                           }}
                           className="px-3 py-1.5 rounded-xl bg-indigo-500/20 border border-indigo-400/20 hover:bg-indigo-500/25 text-sm"
-                          title="Paste AI output into the editor"
                         >
                           Use as draft
                         </button>
@@ -415,7 +465,7 @@ export default function Journal() {
                   )}
 
                   <div className="text-xs text-zinc-500 pt-2 border-t border-white/10">
-                    Later: real AI summaries + RAG-based coping plans (Premium).
+                    Next: real AI summaries + RAG coping plans (Premium).
                   </div>
                 </div>
               )}

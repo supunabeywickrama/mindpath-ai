@@ -11,6 +11,8 @@ import Pricing from "../pages/Pricing";
 import Settings from "../pages/Settings";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import RequireAuth from "../components/RequireAuth";
+
 
 export const router = createBrowserRouter([
   { path: "/", element: <Landing /> },
@@ -19,7 +21,10 @@ export const router = createBrowserRouter([
 
   {
     path: "/app",
-    element: <AppShell />,
+    element: (<RequireAuth>
+                    <AppShell />
+              </RequireAuth>
+              ),
     children: [
       { path: "dashboard", element: <Dashboard /> },
       { path: "mood", element: <MoodLog /> },

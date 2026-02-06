@@ -10,6 +10,8 @@ import {
   Settings,
 } from "lucide-react";
 
+
+
 const nav = [
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/mood", label: "Mood Log", icon: SmilePlus },

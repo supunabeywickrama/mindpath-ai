@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Lock, Mail, ArrowRight } from "lucide-react";
+import { devLogin, setUserId } from "../lib/api";
+
+
 
 export default function Login() {
   const nav = useNavigate();
@@ -9,11 +12,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    // UI-only: later replace with Asgardeo OIDC redirect
-    nav("/app/dashboard");
-  }
+  async function submit(e: React.FormEvent) {
+     e.preventDefault();
+     const user = await devLogin(email);
+     setUserId(user.id);
+     nav("/app/dashboard");
+  } 
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center px-4">
