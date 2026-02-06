@@ -94,3 +94,24 @@ export async function createMood(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export type ChatMsg = { role: "user" | "assistant"; content: string };
+
+export async function aiChat(message: string, history: ChatMsg[], threadId?: number | null) {
+  return request<{ reply: string; created_at: string; thread_id: number }>(`/api/ai/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message, history, thread_id: threadId ?? null }),
+  });
+}
+
+export async function listChatThreads() {
+  return request<{ id: number; title: string; created_at: string }[]>(`/api/ai/threads`);
+}
+
+export async function getChatMessages(threadId: number) {
+  return request<{ id: number; role: "user" | "assistant"; content: string; created_at: string }[]>(
+    `/api/ai/threads/${threadId}/messages`
+  );
+}
+
+

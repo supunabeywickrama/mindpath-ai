@@ -42,3 +42,5 @@ class JournalEntry(Base):
     emotions: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     user: Mapped["User"] = relationship(back_populates="journals")
+
+

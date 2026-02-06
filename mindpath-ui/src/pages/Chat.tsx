@@ -2,11 +2,16 @@ import { useMemo, useRef, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { Mic, Send, Sparkles } from "lucide-react";
+import { aiChat, type ChatMsg } from "../lib/api";
 
 type Msg = { role: "user" | "assistant"; text: string; ts: string };
 
 function now() {
   return new Date().toISOString();
+}
+
+function toApiHistory(msgs: Msg[]): ChatMsg[] {
+  return msgs.map((m) => ({ role: m.role, content: m.text }));
 }
 
 export default function Chat() {
@@ -18,7 +23,11 @@ export default function Chat() {
         "Hi — I’m here with you. If you want, tell me how today has been in one sentence.",
     },
   ]);
+
   const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
   const listRef = useRef<HTMLDivElement>(null);
 
   const quick = useMemo(
@@ -36,26 +45,42 @@ export default function Chat() {
     });
   }
 
-  function send(content?: string) {
+  async function send(content?: string) {
     const msg = (content ?? text).trim();
-    if (!msg) return;
+    if (!msg || loading) return;
+
+    setErr("");
 
     const userMsg: Msg = { role: "user", text: msg, ts: now() };
-    setMessages((m) => [...m, userMsg]);
+    const nextMsgs = [...messages, userMsg];
+
+    setMessages(nextMsgs);
     setText("");
     scrollToBottom();
+    setLoading(true);
 
-    // Mock assistant reply (replace later with FastAPI)
-    setTimeout(() => {
+    try {
+      const res = await aiChat(msg, toApiHistory(nextMsgs));
+      const reply: Msg = {
+        role: "assistant",
+        ts: res.created_at ?? now(),
+        text: res.reply,
+      };
+      setMessages((m) => [...m, reply]);
+      scrollToBottom();
+    } catch (e: any) {
+      setErr(e?.message ?? "Chat failed.");
       const reply: Msg = {
         role: "assistant",
         ts: now(),
         text:
-          "Thanks for sharing. Want to try one small step?\n\n1) Sit comfortably\n2) Inhale 4 seconds\n3) Exhale 6 seconds\nRepeat 5 times.\n\nIf you want, tell me your mood (0–10).",
+          "Sorry — I couldn’t reach the server. Please make sure the backend is running and you’re logged in.",
       };
       setMessages((m) => [...m, reply]);
       scrollToBottom();
-    }, 450);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -64,7 +89,7 @@ export default function Chat() {
       <div className="lg:col-span-4">
         <Card
           title="AI Assistant"
-          subtitle="Supportive chat (mock for now)"
+          subtitle={loading ? "Thinking..." : "Supportive chat (backend mock now)"}
           right={<span className="text-xs text-zinc-500">RAG later</span>}
         >
           <div className="rounded-2xl bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-400/10 p-4">
@@ -74,7 +99,9 @@ export default function Chat() {
               </div>
               <div>
                 <div className="font-semibold">MindPath Companion</div>
-                <div className="text-xs text-zinc-400">Calm • Non-judgmental • Short steps</div>
+                <div className="text-xs text-zinc-400">
+                  Calm • Non-judgmental • Short steps
+                </div>
               </div>
             </div>
 
@@ -90,6 +117,12 @@ export default function Chat() {
             <div className="mt-4 text-xs text-zinc-500">
               Note: Not a medical service. If you feel unsafe, seek immediate help.
             </div>
+
+            {err && (
+              <div className="mt-4 rounded-xl bg-red-500/10 border border-red-400/20 px-3 py-2 text-xs text-red-200">
+                {err}
+              </div>
+            )}
           </div>
 
           <div className="mt-4">
@@ -99,7 +132,8 @@ export default function Chat() {
                 <button
                   key={q}
                   onClick={() => send(q)}
-                  className="text-left rounded-2xl px-4 py-3 bg-white/5 border border-white/10 hover:bg-white/10 transition"
+                  disabled={loading}
+                  className="text-left rounded-2xl px-4 py-3 bg-white/5 border border-white/10 hover:bg-white/10 transition disabled:opacity-50"
                 >
                   <div className="text-sm">{q}</div>
                   <div className="text-xs text-zinc-500 mt-1">Tap to send</div>
@@ -119,7 +153,12 @@ export default function Chat() {
               <div className="font-semibold">Conversation</div>
               <div className="text-xs text-zinc-400">Short, supportive replies.</div>
             </div>
-            <Button variant="ghost" onClick={() => setMessages(messages.slice(0, 1))}>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                setMessages((prev) => (prev.length ? [prev[0]] : prev))
+              }
+            >
               Clear
             </Button>
           </div>
@@ -147,8 +186,9 @@ export default function Chat() {
           <div className="px-5 py-4 border-t border-white/10">
             <div className="flex items-center gap-2">
               <button
-                className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center"
+                className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center disabled:opacity-50"
                 title="Voice (later)"
+                disabled={loading}
               >
                 <Mic size={18} className="text-zinc-300" />
               </button>
@@ -156,16 +196,18 @@ export default function Chat() {
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Type a message…"
+                placeholder={loading ? "Thinking..." : "Type a message…"}
                 className="flex-1 h-11 rounded-xl bg-zinc-950/40 border border-white/10 px-3 outline-none focus:border-indigo-400/40"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") send();
                 }}
+                disabled={loading}
               />
 
               <button
                 onClick={() => send()}
-                className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2"
+                disabled={loading}
+                className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2 disabled:opacity-50"
               >
                 <Send size={16} />
                 Send
@@ -177,11 +219,16 @@ export default function Chat() {
                 <button
                   key={x}
                   onClick={() => setText(x)}
-                  className="px-3 py-1.5 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10"
+                  disabled={loading}
+                  className="px-3 py-1.5 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50"
                 >
                   {x}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-3 text-xs text-zinc-500">
+              This is for wellness support and reflection. It’s not a substitute for professional care.
             </div>
           </div>
         </div>
