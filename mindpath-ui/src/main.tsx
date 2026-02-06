@@ -7,6 +7,15 @@ import "./index.css";
 const theme = JSON.parse(localStorage.getItem("mindpath_state_v1") || "{}")?.settings?.theme;
 if (theme) document.documentElement.dataset.theme = theme;
 
+const raw = localStorage.getItem("mindpath_state_v1");
+if (raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    const theme = parsed?.settings?.theme;
+    if (theme) document.documentElement.dataset.theme = theme;
+  } catch {}
+}
+
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

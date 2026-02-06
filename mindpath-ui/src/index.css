@@ -2,12 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- THEME TOKENS (CSS variables) ---------- */
 :root {
   color-scheme: dark;
+
+  --bg: 9 9 11;         /* zinc-950 */
+  --panel: 24 24 27;    /* zinc-900 */
+  --panel2: 18 18 21;   /* zinc-950-ish */
+  --border: 255 255 255;
+  --text: 244 244 245;  /* zinc-100 */
+  --muted: 161 161 170; /* zinc-400 */
+  --primary: 99 102 241; /* indigo-500 */
 }
 
+:root[data-theme="warm"] {
+  --bg: 16 14 12;        /* warm dark */
+  --panel: 28 25 23;     /* warm panel */
+  --panel2: 20 18 16;    /* warm deeper */
+  --border: 255 255 255;
+  --text: 250 250 249;   /* zinc-50 */
+  --muted: 168 162 158;  /* stone-400 */
+  --primary: 245 158 11; /* amber-500 */
+}
+
+/* ---------- BASE APP STYLES USING TOKENS ---------- */
 html, body {
   height: 100%;
+}
+
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
 }
 
 * {
