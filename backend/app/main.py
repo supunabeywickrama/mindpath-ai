@@ -9,6 +9,7 @@ from app.routers.journal import router as journal_router
 from app.routers.mood import router as moods_router
 
 from app.routers.ai import router as ai_router
+from app.routers.notifications import router as notifications_router
 
 
 def create_app() -> FastAPI:
@@ -27,6 +28,8 @@ def create_app() -> FastAPI:
     app.include_router(journal_router, prefix="/api")
     app.include_router(moods_router, prefix="/api")
     app.include_router(ai_router, prefix="/api")
+    app.include_router(notifications_router, prefix="/api")
+
 
     return app
 

@@ -51,3 +51,19 @@ class JournalOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class CheckInUpdate(BaseModel):
+    tz: str = "Asia/Colombo"
+    hour: int = Field(ge=0, le=23)
+    minute: int = Field(ge=0, le=59)
+    enabled: bool = True
+
+class CheckInOut(BaseModel):
+    id: int
+    tz: str
+    hour: int
+    minute: int
+    enabled: bool
+
+    class Config:
+        from_attributes = True
