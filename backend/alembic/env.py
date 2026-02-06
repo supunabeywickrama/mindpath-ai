@@ -16,6 +16,7 @@ from app.db import Base
 from app import models  # noqa
 from app import chat_models  # noqa
 from app import notify_models  # noqa: F401
+from app import rag_models  # noqa: F401
 
 
 target_metadata = Base.metadata
