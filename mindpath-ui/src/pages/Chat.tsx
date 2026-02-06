@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { Mic, Send, Sparkles } from "lucide-react";
-import { aiChat, type ChatMsg } from "../lib/api";
+import { aiChat, getChatMessages, listChatThreads, type ChatMsg } from "../lib/api";
 
 type Msg = { role: "user" | "assistant"; text: string; ts: string };
 
@@ -14,18 +14,30 @@ function toApiHistory(msgs: Msg[]): ChatMsg[] {
   return msgs.map((m) => ({ role: m.role, content: m.text }));
 }
 
+function getStoredThreadId() {
+  const v = localStorage.getItem("mindpath_thread_id");
+  return v ? Number(v) : null;
+}
+function setStoredThreadId(id: number) {
+  localStorage.setItem("mindpath_thread_id", String(id));
+}
+function clearStoredThreadId() {
+  localStorage.removeItem("mindpath_thread_id");
+}
+
 export default function Chat() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
       ts: now(),
-      text:
-        "Hi — I’m here with you. If you want, tell me how today has been in one sentence.",
+      text: "Hi — I’m here with you. If you want, tell me how today has been in one sentence.",
     },
   ]);
 
+  const [threadId, setThreadId] = useState<number | null>(getStoredThreadId());
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bootLoading, setBootLoading] = useState(true);
   const [err, setErr] = useState("");
 
   const listRef = useRef<HTMLDivElement>(null);
@@ -45,6 +57,47 @@ export default function Chat() {
     });
   }
 
+  async function loadThreadMessages(tid: number) {
+    const apiMsgs = await getChatMessages(tid);
+    if (!apiMsgs.length) return;
+
+    const mapped: Msg[] = apiMsgs.map((m) => ({
+      role: m.role,
+      text: m.content,
+      ts: m.created_at,
+    }));
+
+    setMessages(mapped);
+    scrollToBottom();
+  }
+
+  // On page open: load last thread (so worker messages appear)
+  useEffect(() => {
+    (async () => {
+      setErr("");
+      setBootLoading(true);
+      try {
+        let tid = getStoredThreadId();
+
+        // If no stored thread, pick newest thread from backend
+        if (!tid) {
+          const threads = await listChatThreads();
+          tid = threads?.[0]?.id ?? null;
+          if (tid) setStoredThreadId(tid);
+        }
+
+        if (tid) {
+          setThreadId(tid);
+          await loadThreadMessages(tid);
+        }
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to load chat from server.");
+      } finally {
+        setBootLoading(false);
+      }
+    })();
+  }, []);
+
   async function send(content?: string) {
     const msg = (content ?? text).trim();
     if (!msg || loading) return;
@@ -60,21 +113,22 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const res = await aiChat(msg, toApiHistory(nextMsgs));
-      const reply: Msg = {
-        role: "assistant",
-        ts: res.created_at ?? now(),
-        text: res.reply,
-      };
-      setMessages((m) => [...m, reply]);
-      scrollToBottom();
+      const res = await aiChat(msg, toApiHistory(nextMsgs), threadId);
+
+      // Save thread id (important for persistence)
+      if (!threadId || threadId !== res.thread_id) {
+        setThreadId(res.thread_id);
+        setStoredThreadId(res.thread_id);
+      }
+
+      // Pull latest thread messages from DB (so it matches server + worker inserts)
+      await loadThreadMessages(res.thread_id);
     } catch (e: any) {
       setErr(e?.message ?? "Chat failed.");
       const reply: Msg = {
         role: "assistant",
         ts: now(),
-        text:
-          "Sorry — I couldn’t reach the server. Please make sure the backend is running and you’re logged in.",
+        text: "Sorry — I couldn’t reach the server. Please check backend + worker are running.",
       };
       setMessages((m) => [...m, reply]);
       scrollToBottom();
@@ -83,13 +137,36 @@ export default function Chat() {
     }
   }
 
+  async function refreshFromServer() {
+    if (!threadId) return;
+    setErr("");
+    try {
+      await loadThreadMessages(threadId);
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to refresh.");
+    }
+  }
+
+  function clearChat() {
+    // Creates a “fresh” conversation next time you send
+    setMessages([
+      {
+        role: "assistant",
+        ts: now(),
+        text: "Hi — I’m here with you. What’s going on today?",
+      },
+    ]);
+    setThreadId(null);
+    clearStoredThreadId();
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
       {/* Left: Assistant panel */}
       <div className="lg:col-span-4">
         <Card
           title="AI Assistant"
-          subtitle={loading ? "Thinking..." : "Supportive chat (backend mock now)"}
+          subtitle={bootLoading ? "Loading from server..." : loading ? "Thinking..." : "Supportive chat"}
           right={<span className="text-xs text-zinc-500">RAG later</span>}
         >
           <div className="rounded-2xl bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-400/10 p-4">
@@ -99,9 +176,7 @@ export default function Chat() {
               </div>
               <div>
                 <div className="font-semibold">MindPath Companion</div>
-                <div className="text-xs text-zinc-400">
-                  Calm • Non-judgmental • Short steps
-                </div>
+                <div className="text-xs text-zinc-400">Calm • Non-judgmental • Short steps</div>
               </div>
             </div>
 
@@ -123,6 +198,15 @@ export default function Chat() {
                 {err}
               </div>
             )}
+
+            <div className="mt-4 flex gap-2">
+              <Button variant="secondary" onClick={refreshFromServer} disabled={!threadId || loading || bootLoading}>
+                Refresh
+              </Button>
+              <Button variant="ghost" onClick={clearChat} disabled={loading || bootLoading}>
+                New chat
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4">
@@ -132,7 +216,7 @@ export default function Chat() {
                 <button
                   key={q}
                   onClick={() => send(q)}
-                  disabled={loading}
+                  disabled={loading || bootLoading}
                   className="text-left rounded-2xl px-4 py-3 bg-white/5 border border-white/10 hover:bg-white/10 transition disabled:opacity-50"
                 >
                   <div className="text-sm">{q}</div>
@@ -151,14 +235,11 @@ export default function Chat() {
           <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
             <div>
               <div className="font-semibold">Conversation</div>
-              <div className="text-xs text-zinc-400">Short, supportive replies.</div>
+              <div className="text-xs text-zinc-400">
+                {threadId ? `Thread #${threadId}` : "New thread will be created on first message."}
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              onClick={() =>
-                setMessages((prev) => (prev.length ? [prev[0]] : prev))
-              }
-            >
+            <Button variant="ghost" onClick={clearChat} disabled={loading || bootLoading}>
               Clear
             </Button>
           </div>
@@ -188,7 +269,7 @@ export default function Chat() {
               <button
                 className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center disabled:opacity-50"
                 title="Voice (later)"
-                disabled={loading}
+                disabled={loading || bootLoading}
               >
                 <Mic size={18} className="text-zinc-300" />
               </button>
@@ -201,12 +282,12 @@ export default function Chat() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") send();
                 }}
-                disabled={loading}
+                disabled={loading || bootLoading}
               />
 
               <button
                 onClick={() => send()}
-                disabled={loading}
+                disabled={loading || bootLoading}
                 className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2 disabled:opacity-50"
               >
                 <Send size={16} />
@@ -219,7 +300,7 @@ export default function Chat() {
                 <button
                   key={x}
                   onClick={() => setText(x)}
-                  disabled={loading}
+                  disabled={loading || bootLoading}
                   className="px-3 py-1.5 rounded-xl text-sm bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50"
                 >
                   {x}

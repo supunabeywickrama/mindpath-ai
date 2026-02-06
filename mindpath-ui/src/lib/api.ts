@@ -114,4 +114,28 @@ export async function getChatMessages(threadId: number) {
   );
 }
 
+export type CheckInSchedule = {
+  id: number;
+  tz: string;
+  hour: number;
+  minute: number;
+  enabled: boolean;
+};
+
+export async function getCheckIn() {
+  return request<CheckInSchedule | null>(`/api/notifications/checkin`);
+}
+
+export async function setCheckIn(payload: {
+  tz: string;
+  hour: number;
+  minute: number;
+  enabled: boolean;
+}) {
+  return request<CheckInSchedule>(`/api/notifications/checkin`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 
