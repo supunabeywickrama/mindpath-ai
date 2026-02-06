@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { useAppStore } from "../store/useAppStore";
-import { Search, Trash2, BookText } from "lucide-react";
+import { Search, Trash2, BookText, Sparkles } from "lucide-react";
+import { mockJournalAi, type AiMode } from "../mock/ai";
 
 const EMOTIONS = ["sad", "anxious", "tired", "numb", "okay", "hopeful", "stressed"];
 
@@ -22,8 +23,15 @@ export default function Journal() {
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiMode, setAiMode] = useState<AiMode>("summarize");
+  const [aiOutput, setAiOutput] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+
   const items = useMemo(() => {
-    const all = [...(state.journal ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const all = [...(state.journal ?? [])].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
     if (!q.trim()) return all;
     const s = q.toLowerCase();
     return all.filter(
@@ -40,22 +48,43 @@ export default function Journal() {
   );
 
   function toggleEmotion(e: string) {
-    setEmotions((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
+    setEmotions((prev) =>
+      prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]
+    );
   }
 
   function save() {
     if (!content.trim()) return;
+
     addJournal({
       title: title.trim() || "Untitled",
       content: content.trim(),
       mood: mood === "" ? undefined : mood,
       emotions,
     });
+
     setTitle("");
     setContent("");
     setMood("");
     setEmotions([]);
     setSelectedId(null);
+
+    setAiOpen(false);
+    setAiOutput("");
+    setAiLoading(false);
+  }
+
+  async function runAi(mode: AiMode) {
+    if (!selected) return;
+    setAiOpen(true);
+    setAiMode(mode);
+    setAiLoading(true);
+
+    await new Promise((r) => setTimeout(r, 500));
+
+    const output = mockJournalAi(mode, selected.content);
+    setAiOutput(output);
+    setAiLoading(false);
   }
 
   return (
@@ -193,7 +222,12 @@ export default function Journal() {
               {items.slice(0, 8).map((j) => (
                 <button
                   key={j.id}
-                  onClick={() => setSelectedId(j.id)}
+                  onClick={() => {
+                    setSelectedId(j.id);
+                    setAiOpen(false);
+                    setAiOutput("");
+                    setAiLoading(false);
+                  }}
                   className={`text-left rounded-2xl p-4 border transition ${
                     selectedId === j.id
                       ? "bg-white/10 border-white/10"
@@ -241,7 +275,7 @@ export default function Journal() {
 
           {/* Reader */}
           <div className="rounded-2xl bg-zinc-900/50 border border-white/10 overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="font-semibold">Reader</div>
                 <div className="text-xs text-zinc-400">
@@ -249,19 +283,54 @@ export default function Journal() {
                 </div>
               </div>
 
-              {selected && (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    deleteJournal(selected.id);
-                    setSelectedId(null);
-                  }}
-                  className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2"
-                  title="Delete entry"
+                  onClick={() => selected && runAi("summarize")}
+                  disabled={!selected}
+                  className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
+                  title="Summarize"
                 >
-                  <Trash2 size={16} />
-                  Delete
+                  <Sparkles size={16} />
+                  Summarize
                 </button>
-              )}
+
+                <button
+                  onClick={() => selected && runAi("rewrite")}
+                  disabled={!selected}
+                  className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
+                  title="Rewrite gently"
+                >
+                  <Sparkles size={16} />
+                  Rewrite
+                </button>
+
+                <button
+                  onClick={() => selected && runAi("plan")}
+                  disabled={!selected}
+                  className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2 disabled:opacity-50"
+                  title="Turn into a small plan"
+                >
+                  <Sparkles size={16} />
+                  Plan
+                </button>
+
+                {selected && (
+                  <button
+                    onClick={() => {
+                      deleteJournal(selected.id);
+                      setSelectedId(null);
+                      setAiOpen(false);
+                      setAiOutput("");
+                      setAiLoading(false);
+                    }}
+                    className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm flex items-center gap-2"
+                    title="Delete entry"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="px-5 py-4">
@@ -294,8 +363,59 @@ export default function Journal() {
                     {selected.content}
                   </div>
 
+                  {aiOpen && (
+                    <div className="mt-4 rounded-2xl bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-400/20 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold flex items-center gap-2">
+                            <Sparkles size={16} className="text-indigo-200" />
+                            AI Output{" "}
+                            <span className="text-xs text-zinc-400 capitalize">
+                              ({aiMode})
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-500 mt-1">
+                            Mock now. Later: FastAPI + RAG + safety rules.
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(aiOutput || "");
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
+                        >
+                          Copy
+                        </button>
+                      </div>
+
+                      <div className="mt-3 text-sm whitespace-pre-wrap text-zinc-200">
+                        {aiLoading ? "Thinking..." : aiOutput || "No output yet."}
+                      </div>
+
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => setAiOpen(false)}
+                          className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
+                        >
+                          Close
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (aiOutput) setContent(aiOutput);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 border border-indigo-400/20 hover:bg-indigo-500/25 text-sm"
+                          title="Paste AI output into the editor"
+                        >
+                          Use as draft
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="text-xs text-zinc-500 pt-2 border-t border-white/10">
-                    Later: “Summarize with AI” + “Turn into coping plan” (Premium).
+                    Later: real AI summaries + RAG-based coping plans (Premium).
                   </div>
                 </div>
               )}
