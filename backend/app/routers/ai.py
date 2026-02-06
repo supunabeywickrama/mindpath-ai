@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -9,28 +9,34 @@ from app.auth_dev import get_current_user
 from app.models import User
 from app.chat_models import ChatThread, ChatMessage
 
-
+from app.llm import client, build_instructions
+from app.config import settings
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
 
 class ChatMessageIn(BaseModel):
     role: str
     content: str
+
 
 class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessageIn] = []
     thread_id: int | None = None
 
+
 class ChatResponse(BaseModel):
     reply: str
     created_at: str
     thread_id: int
 
+
 class ThreadOut(BaseModel):
     id: int
     title: str
     created_at: str
+
 
 class MsgOut(BaseModel):
     id: int
@@ -38,15 +44,23 @@ class MsgOut(BaseModel):
     content: str
     created_at: str
 
+
 @router.get("/threads", response_model=list[ThreadOut])
 def list_threads(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    q = select(ChatThread).where(ChatThread.user_id == user.id).order_by(ChatThread.created_at.desc())
+    q = (
+        select(ChatThread)
+        .where(ChatThread.user_id == user.id)
+        .order_by(ChatThread.created_at.desc())
+    )
     threads = list(db.scalars(q).all())
     return [{"id": t.id, "title": t.title, "created_at": t.created_at.isoformat()} for t in threads]
 
+
 @router.get("/threads/{thread_id}/messages", response_model=list[MsgOut])
 def list_thread_messages(thread_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    thread = db.scalar(select(ChatThread).where(ChatThread.id == thread_id, ChatThread.user_id == user.id))
+    thread = db.scalar(
+        select(ChatThread).where(ChatThread.id == thread_id, ChatThread.user_id == user.id)
+    )
     if not thread:
         return []
     q = select(ChatMessage).where(ChatMessage.thread_id == thread_id).order_by(ChatMessage.created_at.asc())
@@ -58,12 +72,21 @@ def list_thread_messages(thread_id: int, db: Session = Depends(get_db), user: Us
 def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     text = payload.message.strip()
     if not text:
-        return {"reply": "Say something and I’ll respond.", "created_at": datetime.utcnow().isoformat(), "thread_id": payload.thread_id or 0}
+        return {
+            "reply": "Say something and I’ll respond.",
+            "created_at": datetime.utcnow().isoformat(),
+            "thread_id": payload.thread_id or 0,
+        }
+
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
 
     # 1) Find or create thread
     thread = None
     if payload.thread_id:
-        thread = db.scalar(select(ChatThread).where(ChatThread.id == payload.thread_id, ChatThread.user_id == user.id))
+        thread = db.scalar(
+            select(ChatThread).where(ChatThread.id == payload.thread_id, ChatThread.user_id == user.id)
+        )
 
     if thread is None:
         thread = ChatThread(user_id=user.id, title="Chat")
@@ -75,15 +98,22 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
     db.add(ChatMessage(thread_id=thread.id, role="user", content=text))
     db.commit()
 
-    # 3) Mock reply (replace in B)
-    reply = (
-        "I hear you. Thanks for sharing.\n\n"
-        "If you want, tell me:\n"
-        "1) What happened today?\n"
-        "2) What are you feeling right now?\n"
-        "3) What would help even 1%?\n\n"
-        "Note: This is a wellness support tool, not medical advice."
-    )
+    # 3) OpenAI reply (B4)
+    input_msgs: list[dict] = []
+    for h in payload.history[-12:]:
+        role = h.role if h.role in ("user", "assistant") else "user"
+        input_msgs.append({"role": role, "content": h.content})
+    input_msgs.append({"role": "user", "content": text})
+
+    try:
+        res = client.responses.create(
+            model=settings.openai_model,
+            instructions=build_instructions(),
+            input=input_msgs,
+        )
+        reply = res.output_text or "I’m here with you — tell me a bit more."
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OpenAI request failed: {e}")
 
     # 4) Store assistant reply
     db.add(ChatMessage(thread_id=thread.id, role="assistant", content=reply))

@@ -18,4 +18,8 @@ class Settings:
          "postgresql+psycopg2://postgres:postgres@localhost:5432/mindpath"
     )
 
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-5")
+
+
 settings = Settings()
