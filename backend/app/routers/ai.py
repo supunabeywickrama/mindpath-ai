@@ -15,6 +15,9 @@ from app.llm import client, build_instructions
 from app.config import settings
 from app.embeddings import embed_texts
 
+from app.safety import detect_crisis, crisis_response
+
+
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
@@ -113,6 +116,14 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
     # 2) Store user message
     db.add(ChatMessage(thread_id=thread.id, role="user", content=text))
     db.commit()
+
+    # 2.5) Safety guardrail: if crisis detected, do NOT call OpenAI
+    sr = detect_crisis(text)
+    if sr.is_crisis:
+        reply = crisis_response()
+        db.add(ChatMessage(thread_id=thread.id, role="assistant", content=reply))
+        db.commit()
+        return {"reply": reply, "created_at": datetime.utcnow().isoformat(), "thread_id": thread.id}
 
     # 3) Build OpenAI messages (history + user message)
     input_msgs: list[dict] = []

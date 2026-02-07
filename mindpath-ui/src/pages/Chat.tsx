@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import { Mic, Send, Sparkles } from "lucide-react";
+import { Mic, Send, Sparkles, ShieldAlert, Phone, MessageCircle } from "lucide-react";
 import { aiChat, getChatMessages, listChatThreads, type ChatMsg } from "../lib/api";
 
 type Msg = { role: "user" | "assistant"; text: string; ts: string };
@@ -23,6 +23,17 @@ function setStoredThreadId(id: number) {
 }
 function clearStoredThreadId() {
   localStorage.removeItem("mindpath_thread_id");
+}
+
+function isCrisisAssistantMessage(text: string) {
+  const t = (text || "").toLowerCase();
+  return (
+    t.includes("are you safe right now") ||
+    t.includes("if you’re in immediate danger") ||
+    t.includes("if you're in immediate danger") ||
+    t.includes("call your local emergency") ||
+    t.includes("nearest emergency department")
+  );
 }
 
 export default function Chat() {
@@ -51,6 +62,14 @@ export default function Chat() {
     []
   );
 
+  const crisisActive = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant") return isCrisisAssistantMessage(m.text);
+    }
+    return false;
+  }, [messages]);
+
   function scrollToBottom() {
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -71,7 +90,6 @@ export default function Chat() {
     scrollToBottom();
   }
 
-  // On page open: load last thread (so worker messages appear)
   useEffect(() => {
     (async () => {
       setErr("");
@@ -79,7 +97,6 @@ export default function Chat() {
       try {
         let tid = getStoredThreadId();
 
-        // If no stored thread, pick newest thread from backend
         if (!tid) {
           const threads = await listChatThreads();
           tid = threads?.[0]?.id ?? null;
@@ -115,13 +132,11 @@ export default function Chat() {
     try {
       const res = await aiChat(msg, toApiHistory(nextMsgs), threadId);
 
-      // Save thread id (important for persistence)
       if (!threadId || threadId !== res.thread_id) {
         setThreadId(res.thread_id);
         setStoredThreadId(res.thread_id);
       }
 
-      // Pull latest thread messages from DB (so it matches server + worker inserts)
       await loadThreadMessages(res.thread_id);
     } catch (e: any) {
       setErr(e?.message ?? "Chat failed.");
@@ -148,7 +163,6 @@ export default function Chat() {
   }
 
   function clearChat() {
-    // Creates a “fresh” conversation next time you send
     setMessages([
       {
         role: "assistant",
@@ -167,7 +181,7 @@ export default function Chat() {
         <Card
           title="AI Assistant"
           subtitle={bootLoading ? "Loading from server..." : loading ? "Thinking..." : "Supportive chat"}
-          right={<span className="text-xs text-zinc-500">RAG later</span>}
+          right={<span className="text-xs text-zinc-500">RAG on</span>}
         >
           <div className="rounded-2xl bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-400/10 p-4">
             <div className="flex items-center gap-3">
@@ -200,7 +214,11 @@ export default function Chat() {
             )}
 
             <div className="mt-4 flex gap-2">
-              <Button variant="secondary" onClick={refreshFromServer} disabled={!threadId || loading || bootLoading}>
+              <Button
+                variant="secondary"
+                onClick={refreshFromServer}
+                disabled={!threadId || loading || bootLoading}
+              >
                 Refresh
               </Button>
               <Button variant="ghost" onClick={clearChat} disabled={loading || bootLoading}>
@@ -244,6 +262,54 @@ export default function Chat() {
             </Button>
           </div>
 
+          {/* Crisis banner */}
+          {crisisActive && (
+            <div className="px-5 py-4 border-b border-white/10">
+              <div className="rounded-2xl bg-red-500/10 border border-red-400/25 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-red-500/15 border border-red-400/20 flex items-center justify-center">
+                    <ShieldAlert size={18} className="text-red-200" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-red-100">Safety support</div>
+                    <div className="text-sm text-red-100/80 mt-1 leading-relaxed">
+                      If you feel in immediate danger, call your local emergency number or go to the nearest emergency
+                      department. If you can, contact someone you trust right now.
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a
+                        href="tel:119"
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
+                        title="Call emergency (Sri Lanka default: 119)"
+                      >
+                        <Phone size={16} />
+                        Call emergency (119)
+                      </a>
+                      <button
+                        onClick={() => setText("I’m not feeling safe right now. Please help me ground for 60 seconds.")}
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
+                      >
+                        <MessageCircle size={16} />
+                        Ask for grounding
+                      </button>
+                      <button
+                        onClick={() => setText("I am safe right now.")}
+                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm"
+                      >
+                        I’m safe
+                      </button>
+                    </div>
+
+                    <div className="mt-2 text-xs text-red-100/60">
+                      This app is not a substitute for professional care.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <div ref={listRef} className="h-[62vh] overflow-y-auto px-5 py-4 space-y-3">
             {messages.map((m, i) => (
@@ -253,6 +319,8 @@ export default function Chat() {
                     "max-w-[85%] rounded-2xl px-4 py-3 border whitespace-pre-wrap",
                     m.role === "user"
                       ? "bg-indigo-500/15 border-indigo-400/20"
+                      : isCrisisAssistantMessage(m.text)
+                      ? "bg-red-500/10 border-red-400/25"
                       : "bg-white/5 border-white/10",
                   ].join(" ")}
                 >
