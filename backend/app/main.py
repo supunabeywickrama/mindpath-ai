@@ -1,3 +1,4 @@
+from app.routers import habits
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(rag_router, prefix="/api")
     app.include_router(memory_router, prefix="/api")
     app.include_router(insights_router, prefix="/api")
+    app.include_router(habits.router, prefix="/api")
 
 
     return app
