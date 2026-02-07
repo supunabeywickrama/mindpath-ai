@@ -138,4 +138,12 @@ export async function setCheckIn(payload: {
   });
 }
 
+export async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "X-User-Id": "4" }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 

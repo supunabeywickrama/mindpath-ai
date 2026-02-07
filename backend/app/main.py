@@ -1,19 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.config import settings
 from app.routers.health import router as health_router
-
 from app.routers.auth import router as auth_router
 from app.routers.journal import router as journal_router
 from app.routers.mood import router as moods_router
-
 from app.routers.ai import router as ai_router
 from app.routers.notifications import router as notifications_router
-
 from app.routers.rag import router as rag_router
-
 from app.routers.memory import router as memory_router
+from app.routers.insights import router as insights_router
 
 
 def create_app() -> FastAPI:
@@ -35,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications_router, prefix="/api")
     app.include_router(rag_router, prefix="/api")
     app.include_router(memory_router, prefix="/api")
+    app.include_router(insights_router, prefix="/api")
 
 
     return app
