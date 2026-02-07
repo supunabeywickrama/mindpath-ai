@@ -13,6 +13,8 @@ from app.routers.notifications import router as notifications_router
 
 from app.routers.rag import router as rag_router
 
+from app.routers.memory import router as memory_router
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name)
@@ -32,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(ai_router, prefix="/api")
     app.include_router(notifications_router, prefix="/api")
     app.include_router(rag_router, prefix="/api")
+    app.include_router(memory_router, prefix="/api")
 
 
     return app

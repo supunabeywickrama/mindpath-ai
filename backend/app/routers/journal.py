@@ -1,20 +1,28 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+
 from app.deps import get_db
 from app.auth_dev import get_current_user
 from app.models import JournalEntry, User
 from app.schemas import JournalCreate, JournalOut
+from app.memory_upsert import upsert_user_memory, delete_user_memory
 
 router = APIRouter(prefix="/journal", tags=["journal"])
+
 
 @router.get("", response_model=list[JournalOut])
 def list_journal(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = select(JournalEntry).where(JournalEntry.user_id == user.id).order_by(JournalEntry.created_at.desc())
+    q = (
+        select(JournalEntry)
+        .where(JournalEntry.user_id == user.id)
+        .order_by(JournalEntry.created_at.desc())
+    )
     return list(db.scalars(q).all())
+
 
 @router.post("", response_model=JournalOut)
 def create_journal(
@@ -32,7 +40,18 @@ def create_journal(
     db.add(entry)
     db.commit()
     db.refresh(entry)
+
+    upsert_user_memory(
+        db,
+        user_id=user.id,
+        kind="journal",
+        source_id=entry.id,
+        content=f"[Journal] {entry.title}\n{entry.content}",
+    )
+    db.commit()
+
     return entry
+
 
 @router.delete("/{entry_id}")
 def delete_journal(
@@ -43,6 +62,9 @@ def delete_journal(
     entry = db.get(JournalEntry, entry_id)
     if not entry or entry.user_id != user.id:
         return {"deleted": False}
+
     db.delete(entry)
+    delete_user_memory(db, user_id=user.id, kind="journal", source_id=entry_id)
     db.commit()
+
     return {"deleted": True}

@@ -121,9 +121,11 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
         input_msgs.append({"role": role, "content": h.content})
     input_msgs.append({"role": "user", "content": text})
 
-    # 3.5) RAG: retrieve top chunks and inject as grounding context
+    # 3.5) RAG: retrieve global knowledge + user memory and inject as grounding context
     try:
         qvec = vec_to_pgvector(embed_texts([text])[0])
+
+        # A) Global knowledge RAG (rag_chunks)
         rows = db.execute(
             sql_text(
                 """
@@ -136,18 +138,45 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
             ),
             {"qvec": qvec},
         ).fetchall()
+        global_context = "\n\n---\n\n".join([r[0] for r in rows]) if rows else ""
 
-        context = "\n\n---\n\n".join([r[0] for r in rows]) if rows else ""
+        # B) Personalized memory RAG (user_memories)
+        mem_rows = db.execute(
+            sql_text(
+                """
+                SELECT content
+                FROM user_memories
+                WHERE user_id = :uid AND embedding IS NOT NULL
+                ORDER BY embedding <=> (:qvec)::vector
+                LIMIT 5
+                """
+            ),
+            {"uid": user.id, "qvec": qvec},
+        ).fetchall()
+        user_context = "\n\n".join([r[0] for r in mem_rows]) if mem_rows else ""
 
-        if context:
+        if user_context:
             input_msgs.insert(
                 0,
                 {
                     "role": "system",
                     "content": (
-                        "Use the following knowledge snippets as grounding. "
-                        "If not relevant to the user’s question, ignore them.\n\n"
-                        f"{context}"
+                        "User context (personal history snippets). Use carefully. "
+                        "Do not claim certainty; phrase as suggestions.\n\n"
+                        f"{user_context}"
+                    ),
+                },
+            )
+
+        if global_context:
+            input_msgs.insert(
+                0,
+                {
+                    "role": "system",
+                    "content": (
+                        "Knowledge base snippets (grounding). "
+                        "Use if relevant; otherwise ignore.\n\n"
+                        f"{global_context}"
                     ),
                 },
             )

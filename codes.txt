@@ -1,0 +1,71 @@
+1) Start Docker DB (Postgres + pgvector)
+
+Open PowerShell:
+
+docker start mindpath-db
+docker ps
+
+
+If you don’t see mindpath-db in docker ps, run:
+
+docker ps -a
+
+
+(then start it again)
+
+Optional: check DB is alive:
+
+docker exec -it mindpath-db psql -U postgres -d mindpath -c "\dt"
+
+--------------------------------------------------------------------------
+
+2) Run Backend (FastAPI)
+
+Open PowerShell Terminal 2:
+
+cd D:\Projects\mindpath-ai\backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
+
+
+Test backend quickly in browser:
+
+http://127.0.0.1:8000/docs
+
+---------------------------------------------------------------
+
+3) Run Frontend (mindpath-ui)
+
+Open PowerShell Terminal 3:
+
+cd D:\Projects\mindpath-ai\mindpath-ui
+npm install
+npm run dev
+
+
+It will show a local URL like:
+
+http://localhost:5173
+
+---------------------------------------------------------------------
+
+4) (Optional) Run Worker (Scheduled check-ins)
+
+Only if you want check-in messages/email running.
+
+Open PowerShell Terminal 4:
+
+cd D:\Projects\mindpath-ai\backend
+.\.venv\Scripts\Activate.ps1
+python worker.py
+
+Quick “is everything working?” checks
+Backend health
+curl http://127.0.0.1:8000/api/health
+
+DB tables
+docker exec -it mindpath-db psql -U postgres -d mindpath -c "\dt"
+
+Frontend
+
+Open the URL printed by npm run dev.
