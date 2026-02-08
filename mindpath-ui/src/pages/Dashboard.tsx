@@ -205,7 +205,7 @@ export default function Dashboard() {
 
       {/* Hero row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 space-y-4">
           <div className="rounded-3xl bg-gradient-to-b from-indigo-500/15 to-transparent border border-indigo-400/15 overflow-hidden">
             <div className="px-6 py-5 border-b border-white/10 flex items-start justify-between gap-4">
               <div>
@@ -265,10 +265,10 @@ export default function Dashboard() {
                     {trend == null
                       ? "Need more logs for trend."
                       : trend > 0
-                      ? "Improving direction — keep basics steady."
-                      : trend < 0
-                      ? "Downward direction — keep goals tiny and rest."
-                      : "Stable — protect your routine."}
+                        ? "Improving direction — keep basics steady."
+                        : trend < 0
+                          ? "Downward direction — keep goals tiny and rest."
+                          : "Stable — protect your routine."}
                   </div>
                 </div>
               </div>
@@ -300,6 +300,45 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          <Card
+            title="Last journal entry"
+            subtitle={latestJournal ? fmtTime(latestJournal.created_at) : "No entries yet"}
+            right={
+              <Link to="/app/journal">
+                <Button variant="secondary">Open</Button>
+              </Link>
+            }
+          >
+            {!latestJournal ? (
+              <div className="text-sm text-zinc-400">You haven’t written any journal entries yet.</div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-lg font-semibold line-clamp-1">{latestJournal.title}</div>
+                <div className="text-sm text-zinc-200 whitespace-pre-wrap line-clamp-4">
+                  {latestJournal.content}
+                </div>
+
+                {latestJournal.emotions?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {latestJournal.emotions.slice(0, 6).map((e) => (
+                      <span
+                        key={e}
+                        className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300"
+                      >
+                        {e}
+                      </span>
+                    ))}
+                    {latestJournal.emotions.length > 6 && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400">
+                        +{latestJournal.emotions.length - 6}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
         </div>
 
         {/* Right: Actions + Focus */}
@@ -341,83 +380,29 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card
-            title="Last journal entry"
-            subtitle={latestJournal ? fmtTime(latestJournal.created_at) : "No entries yet"}
-            right={
-              <Link to="/app/journal">
-                <Button variant="secondary">Open</Button>
-              </Link>
-            }
-          >
-            {!latestJournal ? (
-              <div className="text-sm text-zinc-400">You haven’t written any journal entries yet.</div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-lg font-semibold line-clamp-1">{latestJournal.title}</div>
-                <div className="text-sm text-zinc-200 whitespace-pre-wrap line-clamp-4">
-                  {latestJournal.content}
-                </div>
-
-                {latestJournal.emotions?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {latestJournal.emotions.slice(0, 6).map((e) => (
-                      <span
-                        key={e}
-                        className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300"
-                      >
-                        {e}
-                      </span>
-                    ))}
-                    {latestJournal.emotions.length > 6 && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400">
-                        +{latestJournal.emotions.length - 6}
-                      </span>
-                    )}
-                  </div>
-                )}
+          <Card title="Next step" subtitle="Keep it small">
+            <div className="flex flex-col gap-4">
+              <div className="text-sm text-zinc-300 leading-relaxed">
+                If today feels heavy: choose <span className="text-zinc-100 font-semibold">one tiny task</span>, then rest.
+                Consistency matters more than intensity.
               </div>
-            )}
+              <div className="flex gap-2">
+                <Link to="/app/mood" className="flex-1">
+                  <button className="w-full h-10 px-3 rounded-xl bg-indigo-500/20 border border-indigo-400/20 hover:bg-indigo-500/30 text-indigo-100 text-sm inline-flex items-center justify-center gap-2 font-medium transition">
+                    <Smile size={18} />
+                    Log Mood
+                  </button>
+                </Link>
+                <Link to="/app/journal" className="flex-1">
+                  <button className="w-full h-10 px-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm inline-flex items-center justify-center gap-2 transition">
+                    <BookOpen size={18} />
+                    Journal
+                  </button>
+                </Link>
+              </div>
+            </div>
           </Card>
         </div>
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card title="Next step" subtitle="Keep it small">
-          <div className="text-sm text-zinc-300 leading-relaxed">
-            If today feels heavy: choose <span className="text-zinc-100 font-semibold">one tiny task</span>, then rest.
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Link to="/app/mood">
-              <button className="h-10 px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm inline-flex items-center gap-2">
-                <Smile size={16} />
-                Mood
-              </button>
-            </Link>
-            <Link to="/app/journal">
-              <button className="h-10 px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-sm inline-flex items-center gap-2">
-                <BookOpen size={16} />
-                Journal
-              </button>
-            </Link>
-          </div>
-        </Card>
-
-        <Card title="AI + RAG" subtitle="Grounded support">
-          <div className="text-sm text-zinc-300 leading-relaxed">
-            Your assistant uses knowledge snippets + your memories to keep replies consistent and personalized.
-          </div>
-          <div className="mt-3 text-xs text-zinc-500">
-            (Later: show sources + confidence.)
-          </div>
-        </Card>
-
-        <Card title="Account" subtitle="Authentication later">
-          <div className="text-sm text-zinc-300 leading-relaxed">
-            Next big step: replace dev auth with Asgardeo (OIDC/JWT) and user profiles.
-          </div>
-        </Card>
       </div>
     </div>
   );
