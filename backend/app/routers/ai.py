@@ -133,6 +133,26 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
         input_msgs.append({"role": role, "content": h.content})
     input_msgs.append({"role": "user", "content": text})
 
+    # 3.1) Inject Reminders Context
+    from app.models import Reminder
+    reminders = db.scalars(
+        select(Reminder)
+        .where(Reminder.user_id == user.id, Reminder.email_enabled == True)
+        .order_by(Reminder.next_trigger.asc())
+    ).all()
+    
+    if reminders:
+        lines = ["Active Reminders:"]
+        for r in reminders:
+            recur = f" (Recurring: {r.recurrence_pattern})" if r.is_recurring else ""
+            lines.append(f"- {r.title} at {r.next_trigger}{recur}")
+        reminder_text = "\n".join(lines)
+        
+        input_msgs.insert(0, {
+            "role": "system", 
+            "content": f"User's Schedule:\n{reminder_text}\n(Use this to answer related questions)"
+        })
+
     # 3.5) RAG: retrieve global knowledge + user memory and inject as grounding context
     try:
         qvec = vec_to_pgvector(embed_texts([text])[0])

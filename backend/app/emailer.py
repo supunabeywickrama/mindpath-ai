@@ -1,25 +1,25 @@
 import os
 import aiosmtplib
+import logging
 from email.message import EmailMessage
+from app.config import settings
 
-SMTP_HOST = os.getenv("SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASS = os.getenv("SMTP_PASS", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "no-reply@mindpath.ai")
+logger = logging.getLogger(__name__)
 
 async def send_email(to_email: str, subject: str, body: str):
     msg = EmailMessage()
-    msg["From"] = SMTP_FROM
+    msg["From"] = settings.smtp_from
     msg["To"] = to_email
     msg["Subject"] = subject
     msg.set_content(body)
 
+    logger.info(f"Connecting to SMTP: {settings.smtp_host}:{settings.smtp_port}")
+
     await aiosmtplib.send(
         msg,
-        hostname=SMTP_HOST,
-        port=SMTP_PORT,
+        hostname=settings.smtp_host,
+        port=settings.smtp_port,
         start_tls=True,
-        username=SMTP_USER,
-        password=SMTP_PASS,
+        username=settings.smtp_user,
+        password=settings.smtp_pass,
     )

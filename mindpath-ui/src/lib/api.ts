@@ -273,3 +273,38 @@ export async function setCheckIn(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+/* -------- REMINDERS -------- */
+export interface Reminder {
+  id: number;
+  user_id: number;
+  created_at: string;
+  title: string;
+  next_trigger: string;
+  is_recurring: boolean;
+  recurrence_pattern?: string;
+  email_enabled: boolean;
+}
+
+export async function listReminders() {
+  return request<Reminder[]>("/api/reminders", { method: "GET" });
+}
+
+export async function createReminder(data: {
+  title: string;
+  next_trigger: string; // ISO string
+  is_recurring: boolean;
+  recurrence_pattern?: string;
+  email_enabled: boolean;
+}) {
+  return request<Reminder>("/api/reminders", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteReminder(id: number) {
+  return request<{ deleted: boolean }>(`/api/reminders/${id}`, {
+    method: "DELETE",
+  });
+}

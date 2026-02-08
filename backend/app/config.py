@@ -26,5 +26,12 @@ class Settings:
     asgardeo_issuer: str = os.getenv("ASGARDEO_ISSUER", "")
     asgardeo_audience: str = os.getenv("ASGARDEO_AUDIENCE", "")
 
+    # Email / SMTP
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_pass: str = os.getenv("SMTP_PASS", "")
+    smtp_from: str = os.getenv("SMTP_FROM", "no-reply@mindpath.ai")
+
 
 settings = Settings()

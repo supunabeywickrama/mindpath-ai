@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from app.db import Base
@@ -15,6 +15,8 @@ class User(Base):
     
     external_sub: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
     hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    reminders: Mapped[list["Reminder"]] = relationship(back_populates="user")
 
 class MoodEntry(Base):
     __tablename__ = "mood_entries"
@@ -44,5 +46,27 @@ class JournalEntry(Base):
     emotions: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     user: Mapped["User"] = relationship(back_populates="journals")
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    title: Mapped[str] = mapped_column(String(255))
+    
+    # Core scheduling logic
+    # If is_recurring=False, next_trigger is the one-time targets.
+    # If is_recurring=True, next_trigger is the *next* occurrence, updated after sending.
+    next_trigger: Mapped[datetime] = mapped_column(DateTime, index=True)
+    is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
+    recurrence_pattern: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None) 
+    # e.g., "daily", "weekly:Mon", "weekly:Mon,Wed"
+
+    email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    user: Mapped["User"] = relationship(back_populates="reminders")
 
 

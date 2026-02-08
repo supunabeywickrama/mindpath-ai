@@ -1,4 +1,5 @@
 from app.routers import habits
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -11,6 +12,7 @@ from app.routers.notifications import router as notifications_router
 from app.routers.rag import router as rag_router
 from app.routers.memory import router as memory_router
 from app.routers.insights import router as insights_router
+from app.routers.reminders import router as reminders_router
 
 
 def create_app() -> FastAPI:
@@ -33,8 +35,19 @@ def create_app() -> FastAPI:
     app.include_router(rag_router, prefix="/api")
     app.include_router(memory_router, prefix="/api")
     app.include_router(insights_router, prefix="/api")
-    app.include_router(habits.router, prefix="/api")
+    app.include_router(reminders_router, prefix="/api")
 
+    @app.on_event("startup")
+    async def startup_event():
+        import asyncio
+        from app.db import Base, engine
+        from app.services.scheduler import check_reminders_loop
+        
+        # Create tables if they don't exist
+        Base.metadata.create_all(bind=engine)
+        
+        # Start scheduler
+        asyncio.create_task(check_reminders_loop())
 
     return app
 
