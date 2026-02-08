@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { Search, Trash2, BookText, Sparkles } from "lucide-react";
-import { mockJournalAi, type AiMode } from "../mock/ai";
+import { type AiMode } from "../mock/ai";
 import { apiGetAuth } from "../lib/api";
 import { useAuthContext } from "@asgardeo/auth-react";
 
@@ -10,6 +10,7 @@ import {
   listJournal,
   createJournal,
   deleteJournal,
+  aiTransform,
   type JournalOut,
 } from "../lib/api";
 
@@ -142,12 +143,16 @@ export default function Journal() {
     setAiOpen(true);
     setAiMode(mode);
     setAiLoading(true);
+    setAiOutput("");
 
-    await new Promise((r) => setTimeout(r, 500));
-
-    const output = mockJournalAi(mode, selected.content);
-    setAiOutput(output);
-    setAiLoading(false);
+    try {
+      const res = await aiTransform(selected.content, mode);
+      setAiOutput(res.output);
+    } catch (e: any) {
+      setAiOutput(`Error: ${e.message || "Failed to generate AI response."}`);
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   return (
@@ -438,9 +443,7 @@ export default function Journal() {
                               ({aiMode})
                             </span>
                           </div>
-                          <div className="text-xs text-zinc-500 mt-1">
-                            Mock now. Later: FastAPI + OpenAI + RAG + safety rules.
-                          </div>
+
                         </div>
 
                         <button

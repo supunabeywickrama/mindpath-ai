@@ -218,6 +218,13 @@ export async function createMood(payload: {
 /* -------- AI CHAT -------- */
 export type ChatMsg = { role: "user" | "assistant"; content: string };
 
+export async function aiTransform(text: string, mode: "summarize" | "rewrite" | "plan") {
+  return request<{ output: string }>(`/api/ai/transform`, {
+    method: "POST",
+    body: JSON.stringify({ text, mode }),
+  });
+}
+
 export async function aiChat(
   message: string,
   history: ChatMsg[],

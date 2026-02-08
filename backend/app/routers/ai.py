@@ -212,3 +212,43 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
     db.commit()
 
     return {"reply": reply, "created_at": datetime.utcnow().isoformat(), "thread_id": thread.id}
+
+
+class TransformRequest(BaseModel):
+    text: str
+    mode: str  # summarize, rewrite, plan
+
+
+@router.post("/transform")
+def transform_text(payload: TransformRequest, user: User = Depends(get_current_user)):
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
+
+    instructions = ""
+    if payload.mode == "summarize":
+        instructions = "Summarize this journal entry in 2-3 sentences. Capture the core emotion and key events."
+    elif payload.mode == "rewrite":
+        instructions = "Rewrite this journal entry to be clearer and more self-compassionate. Fix grammar but keep the tone personal/journal-like."
+    elif payload.mode == "plan":
+        instructions = "Based on this journal entry, suggest 3 small, concrete, actionable steps the user can take to feel better or move forward. Format as a bulleted list."
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid mode: {payload.mode}")
+
+    try:
+        # We use a simple chat completion here
+        res = client.responses.create(
+            model=settings.openai_model,
+            instructions="You are a helpful wellness AI assistant.",
+            input=[
+                {"role": "user", "content": f"{instructions}\n\nInput text:\n{text}"}
+            ]
+        )
+        output = res.output_text or "Could not generate a response."
+        return {"output": output}
+    except Exception as e:
+        print(f"OPENAI TRANSFORM ERROR: {e}")
+        raise HTTPException(status_code=502, detail="AI request failed")
