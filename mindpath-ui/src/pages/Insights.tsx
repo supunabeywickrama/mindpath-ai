@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
+
+import { apiGetAuth } from "../lib/api";
+import { useAuthContext } from "@asgardeo/auth-react";
+//import { useEffect, useState } from "react";
+
+
+
 import Button from "../components/Button";
 import {
   ResponsiveContainer,
@@ -34,8 +41,18 @@ function ymd(iso: string) {
 }
 
 export default function Insights() {
-  const [days, setDays] = useState<7 | 30>(7);
+  const { getAccessToken } = useAuthContext();
   const [data, setData] = useState<InsightsSummary | null>(null);
+
+  // Prefetch summary for cache warmer (optional)
+  useEffect(() => {
+    (async () => {
+      // Logic merged into loadSummary ideally, but keeping side-effect for consistency
+      await apiGetAuth(`/api/insights/summary?days=7`, getAccessToken);
+    })();
+  }, [getAccessToken]);
+
+  const [days, setDays] = useState<7 | 30>(7);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -110,10 +127,10 @@ export default function Insights() {
       avg == null
         ? "Add a few mood logs to unlock trends."
         : avg < 4
-        ? "Lower range — keep goals tiny and protect rest."
-        : avg < 7
-        ? "Moderate range — protect your routine and basics."
-        : "Good range — reinforce what’s working.";
+          ? "Lower range — keep goals tiny and protect rest."
+          : avg < 7
+            ? "Moderate range — protect your routine and basics."
+            : "Good range — reinforce what’s working.";
 
     return [
       {

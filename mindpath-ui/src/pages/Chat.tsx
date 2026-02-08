@@ -3,6 +3,9 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { Mic, Send, Sparkles, ShieldAlert, Phone, MessageCircle } from "lucide-react";
 import { aiChat, getChatMessages, listChatThreads, type ChatMsg } from "../lib/api";
+import { apiGetAuth } from "../lib/api";
+import { useAuthContext } from "@asgardeo/auth-react";
+
 
 type Msg = { role: "user" | "assistant"; text: string; ts: string };
 
@@ -37,6 +40,16 @@ function isCrisisAssistantMessage(text: string) {
 }
 
 export default function Chat() {
+  const { getAccessToken } = useAuthContext();
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const d = await apiGetAuth(`/api/insights/summary?days=7`, getAccessToken);
+      setData(d);
+    })();
+  }, [getAccessToken]);
+
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
@@ -69,6 +82,8 @@ export default function Chat() {
     }
     return false;
   }, [messages]);
+
+
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -320,8 +335,8 @@ export default function Chat() {
                     m.role === "user"
                       ? "bg-indigo-500/15 border-indigo-400/20"
                       : isCrisisAssistantMessage(m.text)
-                      ? "bg-red-500/10 border-red-400/25"
-                      : "bg-white/5 border-white/10",
+                        ? "bg-red-500/10 border-red-400/25"
+                        : "bg-white/5 border-white/10",
                   ].join(" ")}
                 >
                   <div className="text-sm leading-relaxed">{m.text}</div>

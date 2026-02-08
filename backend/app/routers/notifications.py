@@ -7,6 +7,7 @@ from app.auth_dev import get_current_user
 from app.models import User
 from app.notify_models import CheckInSchedule
 from app.schemas import CheckInUpdate, CheckInOut
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

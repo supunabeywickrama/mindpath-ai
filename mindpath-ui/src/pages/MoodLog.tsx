@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { listMoods, createMood, type MoodOut } from "../lib/api";
+import { apiGetAuth } from "../lib/api";
+import { useAuthContext } from "@asgardeo/auth-react";
 
 const EMOTIONS = ["sad", "anxious", "tired", "numb", "okay", "hopeful", "stressed"];
 
@@ -11,6 +13,16 @@ function fmtTime(iso: string) {
 }
 
 export default function Mood() {
+  const { getAccessToken } = useAuthContext();
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const d = await apiGetAuth(`/api/insights/summary?days=7`, getAccessToken);
+      setData(d);
+    })();
+  }, [getAccessToken]);
+
   const [mood, setMood] = useState(5);
   const [note, setNote] = useState("");
   const [emotions, setEmotions] = useState<string[]>([]);
@@ -129,11 +141,10 @@ export default function Mood() {
                       <button
                         key={e}
                         onClick={() => toggleEmotion(e)}
-                        className={`px-3 py-1.5 rounded-xl text-sm border transition ${
-                          on
-                            ? "bg-indigo-500/20 border-indigo-400/30"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 rounded-xl text-sm border transition ${on
+                          ? "bg-indigo-500/20 border-indigo-400/30"
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                          }`}
                       >
                         {e}
                       </button>

@@ -7,6 +7,7 @@ from app.auth_dev import get_current_user
 from app.models import JournalEntry, User
 from app.schemas import JournalCreate, JournalOut
 from app.memory_upsert import upsert_user_memory, delete_user_memory
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 

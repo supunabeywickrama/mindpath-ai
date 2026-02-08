@@ -2,12 +2,24 @@ import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { getCheckIn, setCheckIn, type CheckInSchedule } from "../lib/api";
+import { apiGetAuth } from "../lib/api";
+import { useAuthContext } from "@asgardeo/auth-react";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
 export default function Settings() {
+  const { getAccessToken } = useAuthContext();
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const d = await apiGetAuth(`/api/insights/summary?days=7`, getAccessToken);
+      setData(d);
+    })();
+  }, [getAccessToken]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");

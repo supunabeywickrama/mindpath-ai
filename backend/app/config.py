@@ -9,7 +9,7 @@ class Settings:
 
     cors_origins: list[str] = [
         x.strip()
-        for x in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+        for x in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
         if x.strip()
     ]
 
@@ -22,6 +22,9 @@ class Settings:
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-5")
     openai_embed_model: str = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 
+    auth_mode: str = os.getenv("AUTH_MODE", "dev")
+    asgardeo_issuer: str = os.getenv("ASGARDEO_ISSUER", "")
+    asgardeo_audience: str = os.getenv("ASGARDEO_AUDIENCE", "")
 
 
 settings = Settings()

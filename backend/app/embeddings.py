@@ -8,3 +8,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         input=texts,
     )
     return [d.embedding for d in res.data]
+
+
+
+

@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Integer, DateTime, Text, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
+from pgvector.sqlalchemy import Vector
 from app.db import Base
 
 class UserMemory(Base):
@@ -12,4 +13,6 @@ class UserMemory(Base):
     source_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # journal id / mood id
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    # embedding column added in migration
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)

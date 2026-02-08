@@ -9,6 +9,7 @@ from app.auth_dev import get_current_user
 from app.models import User
 from app.llm import client, build_instructions
 from app.config import settings
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/insights", tags=["insights"])
 

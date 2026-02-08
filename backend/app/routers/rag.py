@@ -8,6 +8,7 @@ from app.auth_dev import get_current_user
 from app.models import User
 from app.rag_models import RagDocument, RagChunk
 from app.embeddings import embed_texts
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 

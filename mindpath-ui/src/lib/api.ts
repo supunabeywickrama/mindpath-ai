@@ -1,5 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
 
+/**
+ * DEV auth support (current)
+ * - Keeps your existing dev login flow working (X-User-Id)
+ */
 export function getUserId() {
   return localStorage.getItem("mindpath_user_id");
 }
@@ -12,22 +16,108 @@ export function clearUserId() {
   localStorage.removeItem("mindpath_user_id");
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const userId = getUserId();
+/**
+ * OIDC auth support (Asgardeo)
+ * - Store access token if you want a non-hook API layer
+ * - OPTIONAL: You can skip this and pass token per request from pages using useAuthContext().
+ */
+export function setAccessToken(token: string) {
+  localStorage.setItem("mindpath_access_token", token);
+}
 
+export function getAccessTokenStored() {
+  return localStorage.getItem("mindpath_access_token");
+}
+
+export function clearAccessToken() {
+  localStorage.removeItem("mindpath_access_token");
+}
+
+async function parseError(res: Response) {
+  const text = await res.text();
+  return text || `Request failed: ${res.status}`;
+}
+
+/**
+ * Core request helper:
+ * - If token is provided -> Authorization: Bearer <token>
+ * - Else if dev user id exists -> X-User-Id
+ * - Content-Type is set only when needed (JSON body)
+ */
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  token?: string
+): Promise<T> {
+  const userId = getUserId();
   const headers = new Headers(options.headers || {});
-  headers.set("Content-Type", "application/json");
-  if (userId) headers.set("X-User-Id", userId);
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  if (userId) {
+    headers.set("X-User-Id", userId);
+  }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Request failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 
-/* -------- AUTH -------- */
+/**
+ * Convenience:
+ * - Use Asgardeo token provider from pages (recommended)
+ *   const { getAccessToken } = useAuthContext();
+ *   apiGetAuth("/api/...", getAccessToken)
+ */
+export async function apiGetAuth<T>(path: string, getToken: () => Promise<string>) {
+  const token = await getToken();
+  return request<T>(path, { method: "GET" }, token);
+}
+
+export async function apiPostAuth<T>(
+  path: string,
+  body: unknown,
+  getToken: () => Promise<string>
+) {
+  const token = await getToken();
+  return request<T>(
+    path,
+    { method: "POST", body: JSON.stringify(body) },
+    token
+  );
+}
+
+export async function apiDeleteAuth<T>(path: string, getToken: () => Promise<string>) {
+  const token = await getToken();
+  return request<T>(path, { method: "DELETE" }, token);
+}
+
+/**
+ * If you choose to store token in localStorage (optional),
+ * these helpers use stored Bearer token automatically.
+ */
+export async function apiGet<T>(path: string) {
+  const token = getAccessTokenStored() ?? undefined;
+  return request<T>(path, { method: "GET" }, token);
+}
+
+export async function apiPost<T>(path: string, body: unknown) {
+  const token = getAccessTokenStored() ?? undefined;
+  return request<T>(path, { method: "POST", body: JSON.stringify(body) }, token);
+}
+
+export async function apiDelete<T>(path: string) {
+  const token = getAccessTokenStored() ?? undefined;
+  return request<T>(path, { method: "DELETE" }, token);
+}
+
+/* -------- AUTH (DEV) -------- */
 export async function devLogin(email: string) {
   return request<{ id: number; email: string }>(`/api/auth/dev-login`, {
     method: "POST",
@@ -47,7 +137,7 @@ export type JournalOut = {
 };
 
 export async function listJournal() {
-  return request<JournalOut[]>(`/api/journal`);
+  return request<JournalOut[]>(`/api/journal`, { method: "GET" });
 }
 
 export async function createJournal(payload: {
@@ -63,9 +153,7 @@ export async function createJournal(payload: {
 }
 
 export async function deleteJournal(entryId: number) {
-  return request<{ deleted: boolean }>(`/api/journal/${entryId}`, {
-    method: "DELETE",
-  });
+  return request<{ deleted: boolean }>(`/api/journal/${entryId}`, { method: "DELETE" });
 }
 
 /* -------- MOODS -------- */
@@ -80,7 +168,7 @@ export type MoodOut = {
 };
 
 export async function listMoods() {
-  return request<MoodOut[]>(`/api/moods`);
+  return request<MoodOut[]>(`/api/moods`, { method: "GET" });
 }
 
 export async function createMood(payload: {
@@ -95,9 +183,14 @@ export async function createMood(payload: {
   });
 }
 
+/* -------- AI CHAT -------- */
 export type ChatMsg = { role: "user" | "assistant"; content: string };
 
-export async function aiChat(message: string, history: ChatMsg[], threadId?: number | null) {
+export async function aiChat(
+  message: string,
+  history: ChatMsg[],
+  threadId?: number | null
+) {
   return request<{ reply: string; created_at: string; thread_id: number }>(`/api/ai/chat`, {
     method: "POST",
     body: JSON.stringify({ message, history, thread_id: threadId ?? null }),
@@ -105,15 +198,19 @@ export async function aiChat(message: string, history: ChatMsg[], threadId?: num
 }
 
 export async function listChatThreads() {
-  return request<{ id: number; title: string; created_at: string }[]>(`/api/ai/threads`);
+  return request<{ id: number; title: string; created_at: string }[]>(`/api/ai/threads`, {
+    method: "GET",
+  });
 }
 
 export async function getChatMessages(threadId: number) {
   return request<{ id: number; role: "user" | "assistant"; content: string; created_at: string }[]>(
-    `/api/ai/threads/${threadId}/messages`
+    `/api/ai/threads/${threadId}/messages`,
+    { method: "GET" }
   );
 }
 
+/* -------- NOTIFICATIONS / CHECK-IN -------- */
 export type CheckInSchedule = {
   id: number;
   tz: string;
@@ -123,7 +220,7 @@ export type CheckInSchedule = {
 };
 
 export async function getCheckIn() {
-  return request<CheckInSchedule | null>(`/api/notifications/checkin`);
+  return request<CheckInSchedule | null>(`/api/notifications/checkin`, { method: "GET" });
 }
 
 export async function setCheckIn(payload: {
@@ -137,13 +234,3 @@ export async function setCheckIn(payload: {
     body: JSON.stringify(payload),
   });
 }
-
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "X-User-Id": "4" }
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-

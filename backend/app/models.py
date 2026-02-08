@@ -12,7 +12,8 @@ class User(Base):
 
     moods: Mapped[list["MoodEntry"]] = relationship(back_populates="user")
     journals: Mapped[list["JournalEntry"]] = relationship(back_populates="user")
-
+    
+    external_sub: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
 
 class MoodEntry(Base):
     __tablename__ = "mood_entries"

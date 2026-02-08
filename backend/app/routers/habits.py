@@ -9,6 +9,7 @@ from app.auth_dev import get_current_user
 from app.models import User
 from app.db import Base
 import sqlalchemy as sa
+from app.auth import get_current_user
 
 
 router = APIRouter(prefix="/habits", tags=["habits"])

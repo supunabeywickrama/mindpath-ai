@@ -7,6 +7,7 @@ from app.auth_dev import get_current_user
 from app.models import User, JournalEntry, MoodEntry
 from app.memory_models import UserMemory
 from app.embeddings import embed_texts
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 

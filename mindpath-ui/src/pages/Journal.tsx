@@ -3,6 +3,9 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import { Search, Trash2, BookText, Sparkles } from "lucide-react";
 import { mockJournalAi, type AiMode } from "../mock/ai";
+import { apiGetAuth } from "../lib/api";
+import { useAuthContext } from "@asgardeo/auth-react";
+
 import {
   listJournal,
   createJournal,
@@ -18,6 +21,16 @@ function fmtTime(iso: string) {
 }
 
 export default function Journal() {
+  const { getAccessToken } = useAuthContext();
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const d = await apiGetAuth(`/api/insights/summary?days=7`, getAccessToken);
+      setData(d);
+    })();
+  }, [getAccessToken]);
+
   // Editor state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -217,11 +230,10 @@ export default function Journal() {
                       <button
                         key={e}
                         onClick={() => toggleEmotion(e)}
-                        className={`px-3 py-1.5 rounded-xl text-sm border transition ${
-                          on
-                            ? "bg-indigo-500/20 border-indigo-400/30"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 rounded-xl text-sm border transition ${on
+                          ? "bg-indigo-500/20 border-indigo-400/30"
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                          }`}
                       >
                         {e}
                       </button>
@@ -292,11 +304,10 @@ export default function Journal() {
                     setAiOutput("");
                     setAiLoading(false);
                   }}
-                  className={`text-left rounded-2xl p-4 border transition ${
-                    selectedId === j.id
-                      ? "bg-white/10 border-white/10"
-                      : "bg-white/5 border-white/10 hover:bg-white/10"
-                  }`}
+                  className={`text-left rounded-2xl p-4 border transition ${selectedId === j.id
+                    ? "bg-white/10 border-white/10"
+                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="font-semibold line-clamp-1">{j.title}</div>

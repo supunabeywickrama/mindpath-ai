@@ -5,6 +5,7 @@ from app.deps import get_db
 from app.auth_dev import get_current_user
 from app.models import MoodEntry, User
 from app.schemas import MoodCreate, MoodOut
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/moods", tags=["moods"])
 

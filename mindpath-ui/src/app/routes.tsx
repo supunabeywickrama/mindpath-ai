@@ -12,13 +12,17 @@ import Settings from "../pages/Settings";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import RequireAuth from "../components/RequireAuth";
+import AuthCallback from "../pages/AuthCallback";
+import RouteError from "../pages/RouteError";
+
+
 
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Landing /> },
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
-
+  { path: "/", element: <Login /> },
+  { path: "/login", element: <Login />, errorElement: <RouteError /> },
+  { path: "/register", element: <Register />, errorElement: <RouteError /> },
+  { path: "/callback", element: <AuthCallback />, errorElement: <RouteError /> },
   {
     path: "/app",
     element: (<RequireAuth>

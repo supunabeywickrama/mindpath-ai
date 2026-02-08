@@ -16,6 +16,7 @@ from app.config import settings
 from app.embeddings import embed_texts
 
 from app.safety import detect_crisis, crisis_response
+from app.auth import get_current_user
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -191,8 +192,9 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
                     ),
                 },
             )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"RAG ERROR: {e}")
+        db.rollback()
 
     # 4) OpenAI reply
     try:
