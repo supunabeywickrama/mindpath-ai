@@ -20,6 +20,7 @@ const asgardeoConfig = {
   clientID: import.meta.env.VITE_ASGARDEO_CLIENT_ID,
   baseUrl: import.meta.env.VITE_ASGARDEO_BASE_URL,
   scope: ["openid", "profile", "email"],
+  storage: "localStorage" as const,
 };
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -27,6 +28,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     super(props);
     this.state = { hasError: false, error: null };
   }
+
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };

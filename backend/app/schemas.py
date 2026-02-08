@@ -15,6 +15,18 @@ class UserOut(BaseModel):
 class DevLoginIn(BaseModel):
     email: EmailStr
 
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
 # -------- Mood --------
 class MoodCreate(BaseModel):
     mood: int = Field(ge=0, le=10)

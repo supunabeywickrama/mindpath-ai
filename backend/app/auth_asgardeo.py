@@ -47,12 +47,28 @@ async def get_current_user_asgardeo(
     if not sub:
         raise HTTPException(status_code=401, detail="Token missing sub")
 
+    # 1. Try to find by external_sub
     user = db.query(User).filter(User.external_sub == sub).first()
 
-    if user is None:
-        user = User(email=email or "unknown", external_sub=sub)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    if user:
+        return user
+
+    # 2. If not found, try to find by email (legacy/dev link)
+    if email:
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            # Found by email but missing sub -> Link them now
+            if not user.external_sub:
+                user.external_sub = sub
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            return user
+
+    # 3. If still not found, create new user
+    user = User(email=email or "unknown", external_sub=sub)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
     return user

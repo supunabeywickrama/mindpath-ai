@@ -125,6 +125,38 @@ export async function devLogin(email: string) {
   });
 }
 
+/* -------- AUTH (LOCAL) -------- */
+export type TokenResponse = {
+  access_token: string;
+  token_type: string;
+};
+
+export type UserProfile = {
+  id: number;
+  email: string;
+  created_at: string;
+  is_admin: boolean;
+};
+
+export async function register(email: string, password: string) {
+  return request<TokenResponse>(`/api/auth/register`, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function login(email: string, password: string) {
+  return request<TokenResponse>(`/api/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function getMe() {
+  const token = getAccessTokenStored() ?? undefined;
+  return request<UserProfile>(`/api/auth/me`, { method: "GET" }, token);
+}
+
 /* -------- JOURNAL -------- */
 export type JournalOut = {
   id: number;
