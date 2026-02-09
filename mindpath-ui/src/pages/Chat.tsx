@@ -67,6 +67,7 @@ export default function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -135,7 +136,22 @@ export default function Chat() {
   }, []);
 
   async function send(content?: string) {
-    const msg = (content ?? text).trim();
+    // If we have recorded audio, transcribe it first
+    let msg = (content ?? text).trim();
+
+    if (recordedAudio && !content) {
+      setLoading(true);
+      try {
+        const { text: transcribed } = await transcribeAudio(recordedAudio);
+        msg = transcribed;
+        setRecordedAudio(null); // Clear audio after using it
+      } catch (e: any) {
+        setErr("Transcription failed: " + e.message);
+        setLoading(false);
+        return;
+      }
+    }
+
     if (!msg || loading) return;
 
     setErr("");
@@ -196,6 +212,7 @@ export default function Chat() {
   // Voice Logic
   async function startRecording() {
     setErr("");
+    setRecordedAudio(null);
     audioChunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -207,21 +224,10 @@ export default function Chat() {
         }
       };
 
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         stream.getTracks().forEach(track => track.stop()); // Stop mic
-
-        // Transcribe
-        setLoading(true);
-        try {
-          const { text } = await transcribeAudio(audioBlob);
-          if (text) {
-            send(text);
-          }
-        } catch (e: any) {
-          setErr("Failed to transcribe audio. " + e.message);
-          setLoading(false);
-        }
+        setRecordedAudio(audioBlob);
       };
 
       recorder.start();
@@ -247,6 +253,10 @@ export default function Chat() {
     } else {
       startRecording();
     }
+  }
+
+  function discardRecording() {
+    setRecordedAudio(null);
   }
 
   return (
@@ -410,29 +420,40 @@ export default function Chat() {
           <div className="px-5 py-4 border-t border-white/10">
             <div className="flex items-center gap-2">
               <button
-                className={`h-11 w-11 rounded-xl border flex items-center justify-center transition disabled:opacity-50 ${isRecording ? "bg-red-500/20 border-red-500 text-red-400 animate-pulse" : "bg-white/5 border-white/10 hover:bg-white/10"}`}
-                title={isRecording ? "Stop recording (will send)" : "Voice input"}
+                className={`h-11 w-11 rounded-xl border flex items-center justify-center transition disabled:opacity-50 ${isRecording ? "bg-red-500/20 border-red-500 text-red-400 animate-pulse" : recordedAudio ? "bg-white/5 border-white/10 text-indigo-400" : "bg-white/5 border-white/10 hover:bg-white/10 text-zinc-300"}`}
+                title={isRecording ? "Stop recording" : "Voice input"}
                 onClick={toggleRecording}
                 disabled={loading || bootLoading}
               >
-                {isRecording ? <MicOff size={18} /> : <Mic size={18} className="text-zinc-300" />}
+                {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
 
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={isRecording ? "Listening..." : loading ? "Thinking..." : "Type a message…"}
-                className="flex-1 h-11 rounded-xl bg-zinc-950/40 border border-white/10 px-3 outline-none focus:border-indigo-400/40"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") send();
-                }}
-                disabled={loading || bootLoading || isRecording}
-              />
+              <div className="flex-1 relative">
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={isRecording ? "Listening..." : recordedAudio ? "Voice message recorded. Click Send." : loading ? "Thinking..." : "Type a message…"}
+                  className="w-full h-11 rounded-xl bg-zinc-950/40 border border-white/10 px-3 outline-none focus:border-indigo-400/40"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") send();
+                  }}
+                  disabled={loading || bootLoading || isRecording}
+                />
+                {recordedAudio && (
+                  <button
+                    onClick={discardRecording}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition"
+                    title="Discard recording"
+                  >
+                    <MicOff size={14} />
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => send()}
-                disabled={loading || bootLoading || isRecording}
-                className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2 disabled:opacity-50"
+                disabled={loading || bootLoading || isRecording || (!text && !recordedAudio)}
+                className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 Send
