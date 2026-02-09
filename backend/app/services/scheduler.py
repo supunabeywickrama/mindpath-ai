@@ -35,13 +35,17 @@ async def process_reminders(db: Session):
     ).all()
 
     for reminder, user in results:
-        logger.info(f"📧 Sending reminder to {user.email}: '{reminder.title}'")
+        logger.info(f"📧 Sending reminder to {user.email} (User ID: {user.id}): '{reminder.title}'")
         
         try:
+            # Generate AI content
+            from app.llm import generate_reminder_email
+            subject, body = await generate_reminder_email(reminder.title)
+
             await send_email(
                 to_email=user.email,
-                subject=f"Reminder: {reminder.title}",
-                body=f"Hi there,\n\nJust a reminder: {reminder.title}\n\n- MindPath AI"
+                subject=subject,
+                body=body
             )
         except Exception as e:
             logger.error(f"Failed to send email to {user.email}: {e}")
