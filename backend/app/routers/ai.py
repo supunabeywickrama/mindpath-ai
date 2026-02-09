@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime
+import io
 
 from sqlalchemy import text as sql_text
 
@@ -20,6 +21,41 @@ from app.auth import get_current_user
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+
+@router.post("/transcribe")
+async def transcribe_audio(
+    file: UploadFile = File(...), 
+    user: User = Depends(get_current_user)
+):
+    """
+    Transcribe uploaded audio file (blob) to text using OpenAI Whisper.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
+
+    try:
+        # Read file content
+        content = await file.read()
+        
+        # We need to pass a file-like object with a name to OpenAI API
+        # The 'name' attribute helps OpenAI determine the file type (e.g. .webm, .mp3)
+        buffer = io.BytesIO(content)
+        buffer.name = file.filename or "audio.webm"  
+        
+        # Call OpenAI Whisper
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=buffer,
+            response_format="text"
+        )
+        
+        # 'transcript' is just the text string when response_format="text"
+        return {"text": transcript}
+
+    except Exception as e:
+        print(f"TRANSCRIPTION ERROR: {e}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 def vec_to_pgvector(v: list[float]) -> str:

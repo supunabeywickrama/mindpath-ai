@@ -14,6 +14,42 @@ if (raw) {
   } catch { }
 }
 
+// Load Custom Theme
+try {
+  const customThemeRaw = localStorage.getItem("mindpath_custom_theme");
+  if (customThemeRaw) {
+    const customTheme = JSON.parse(customThemeRaw);
+    if (customTheme.primary) {
+      document.documentElement.style.setProperty("--primary", customTheme.primary);
+    }
+    if (customTheme.base) {
+      document.documentElement.style.setProperty("--bg", customTheme.base);
+      // Derive panel colors from base (simplified) or let user set them too? 
+      // User asked for "2 tones". We can try to smartly derive panel/panel2 or just set them to the same base tone but lighter?
+      // For now, let's assume "base" sets the --bg.
+      // Ideally we should generate a slightly lighter tone for panel if it's not provided.
+      // But let's stick to what's requested: "2 tones".
+      // We'll set --bg to the base. 
+      // For --panel and --panel2, we might want to calculate them or just use the same base.
+      // Let's just set --bg for now, and maybe --panel if we want a "flat" look, 
+      // OR we can implement a tiny helper to lighten the color for panels.
+
+      // Actually, let's just use the 'base' for everything for now to see how it looks, 
+      // or maybe the user wants to pick both? The UI I added only had "Base Tone".
+      // Let's assume Base Tone = --bg.
+      // And we leave --panel as default OR try to shift it.
+
+      // Let's try to pass 'panel' as well if saved.
+      if (customTheme.panel) {
+        document.documentElement.style.setProperty("--panel", customTheme.panel);
+        document.documentElement.style.setProperty("--panel2", customTheme.panel); // simplified
+      }
+    }
+  }
+} catch (e) {
+  console.error("Failed to load custom theme", e);
+}
+
 const asgardeoConfig = {
   signInRedirectURL: import.meta.env.VITE_ASGARDEO_SIGN_IN_REDIRECT_URL,
   signOutRedirectURL: import.meta.env.VITE_ASGARDEO_SIGN_OUT_REDIRECT_URL,

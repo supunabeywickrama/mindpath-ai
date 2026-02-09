@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import { Mic, Send, Sparkles, ShieldAlert, Phone, MessageCircle } from "lucide-react";
-import { aiChat, getChatMessages, listChatThreads, type ChatMsg } from "../lib/api";
+import { Mic, Send, Sparkles, ShieldAlert, Phone, MessageCircle, MicOff, Loader2 } from "lucide-react";
+import { aiChat, getChatMessages, listChatThreads, transcribeAudio, type ChatMsg } from "../lib/api";
 import { apiGetAuth } from "../lib/api";
 import { useAuthContext } from "@asgardeo/auth-react";
-
 
 type Msg = { role: "user" | "assistant"; text: string; ts: string };
 
@@ -63,6 +62,11 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
   const [err, setErr] = useState("");
+
+  // Voice State
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -187,6 +191,62 @@ export default function Chat() {
     ]);
     setThreadId(null);
     clearStoredThreadId();
+  }
+
+  // Voice Logic
+  async function startRecording() {
+    setErr("");
+    audioChunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach(track => track.stop()); // Stop mic
+
+        // Transcribe
+        setLoading(true);
+        try {
+          const { text } = await transcribeAudio(audioBlob);
+          if (text) {
+            send(text);
+          }
+        } catch (e: any) {
+          setErr("Failed to transcribe audio. " + e.message);
+          setLoading(false);
+        }
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (e) {
+      console.error(e);
+      setErr("Could not access microphone. Please allow permissions.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  }
+
+  function toggleRecording() {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   }
 
   return (
@@ -350,30 +410,31 @@ export default function Chat() {
           <div className="px-5 py-4 border-t border-white/10">
             <div className="flex items-center gap-2">
               <button
-                className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center disabled:opacity-50"
-                title="Voice (later)"
+                className={`h-11 w-11 rounded-xl border flex items-center justify-center transition disabled:opacity-50 ${isRecording ? "bg-red-500/20 border-red-500 text-red-400 animate-pulse" : "bg-white/5 border-white/10 hover:bg-white/10"}`}
+                title={isRecording ? "Stop recording (will send)" : "Voice input"}
+                onClick={toggleRecording}
                 disabled={loading || bootLoading}
               >
-                <Mic size={18} className="text-zinc-300" />
+                {isRecording ? <MicOff size={18} /> : <Mic size={18} className="text-zinc-300" />}
               </button>
 
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder={loading ? "Thinking..." : "Type a message…"}
+                placeholder={isRecording ? "Listening..." : loading ? "Thinking..." : "Type a message…"}
                 className="flex-1 h-11 rounded-xl bg-zinc-950/40 border border-white/10 px-3 outline-none focus:border-indigo-400/40"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") send();
                 }}
-                disabled={loading || bootLoading}
+                disabled={loading || bootLoading || isRecording}
               />
 
               <button
                 onClick={() => send()}
-                disabled={loading || bootLoading}
+                disabled={loading || bootLoading || isRecording}
                 className="h-11 px-4 rounded-xl bg-indigo-500/90 hover:bg-indigo-500 border border-indigo-400/30 font-medium flex items-center gap-2 disabled:opacity-50"
               >
-                <Send size={16} />
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 Send
               </button>
             </div>

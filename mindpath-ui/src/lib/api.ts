@@ -236,6 +236,29 @@ export async function aiChat(
   });
 }
 
+export async function transcribeAudio(audioBlob: Blob) {
+  const formData = new FormData();
+  formData.append("file", audioBlob, "recording.webm");
+
+  // We use fetch directly here because 'request' helper assumes JSON usually, 
+  // and we need to let browser set Content-Type for FormData
+  const token = getAccessTokenStored();
+  const headers: HeadersInit = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/api/ai/transcribe`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text() || "Transcription failed");
+  }
+
+  return res.json() as Promise<{ text: string }>;
+}
+
 export async function listChatThreads() {
   return request<{ id: number; title: string; created_at: string }[]>(`/api/ai/threads`, {
     method: "GET",
