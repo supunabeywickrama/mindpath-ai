@@ -44,6 +44,12 @@ class UserOut(BaseModel):
     country: str | None = None
     timezone: str = "UTC"
 
+    # Subscription
+    subscription_plan: str = "free"
+    is_trial: bool = False
+    trial_ends_at: datetime | None = None
+    subscription_ends_at: datetime | None = None
+
     class Config:
         from_attributes = True
 

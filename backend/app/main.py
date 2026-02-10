@@ -1,4 +1,4 @@
-from app.routers import habits
+from app.routers import habits, billing, payhere
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
     app.include_router(insights_router, prefix="/api")
     app.include_router(reminders_router, prefix="/api")
     app.include_router(habits.router, prefix="/api")
+    app.include_router(billing.router, prefix="/api")
+    app.include_router(payhere.router, prefix="/api")
 
     @app.on_event("startup")
     async def startup_event():

@@ -140,6 +140,10 @@ export type UserProfile = {
   language?: string;
   country?: string | null;
   timezone?: string;
+  subscription_plan?: string; // free, trial, premium
+  is_trial?: boolean;
+  trial_ends_at?: string | null;
+  subscription_ends_at?: string | null;
 };
 
 export async function register(email: string, password: string) {
@@ -374,7 +378,33 @@ export async function toggleHabit(id: number, date: string) {
     `/api/habits/${id}/toggle`,
     {
       method: "POST",
-      body: JSON.stringify({ date }),
     }
   );
+}
+
+/* -------- BILLING -------- */
+export async function startTrial() {
+  return request<UserProfile>("/api/billing/start-trial", { method: "POST" });
+}
+
+export async function upgradePremium() {
+  return request<UserProfile>("/api/billing/upgrade", { method: "POST" });
+}
+
+export async function cancelSubscription() {
+  return request<UserProfile>("/api/billing/cancel", { method: "POST" });
+}
+
+export async function createCheckoutSession(period: "monthly" | "yearly") {
+  return request<{ url: string }>("/api/payment/checkout", {
+    method: "POST",
+    body: JSON.stringify({ period }),
+  });
+}
+
+export async function signPayHere(period: "monthly" | "yearly") {
+  return request<any>("/api/payhere/sign", {
+    method: "POST",
+    body: JSON.stringify({ period }),
+  });
 }

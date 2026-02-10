@@ -22,6 +22,13 @@ class User(Base):
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     timezone: Mapped[str] = mapped_column(String(50), default="UTC")
 
+    # Subscription
+    subscription_plan: Mapped[str] = mapped_column(String(20), default="free") # free, trial, premium
+    is_trial: Mapped[bool] = mapped_column(Boolean, default=False)
+    trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    subscription_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+
     reminders: Mapped[list["Reminder"]] = relationship(back_populates="user")
 
 class MoodEntry(Base):
