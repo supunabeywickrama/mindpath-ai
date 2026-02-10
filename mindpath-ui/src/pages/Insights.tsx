@@ -160,9 +160,28 @@ export default function Insights() {
   async function handleEmailReport() {
     setExporting(true);
     try {
-      await apiPostAuth(`/api/insights/export/email?days=${days}`, {}, getAccessToken);
+      let token = "";
+      try { token = await getAccessToken(); } catch (e) { }
+
+      const userId = getUserId() || (import.meta.env.VITE_DEV_USER_ID ?? "4");
+
+      const headers: HeadersInit = {
+        "X-User-Id": userId!,
+        "Content-Type": "application/json"
+      };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE}/api/insights/export/email?days=${days}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({})
+      });
+
+      if (!res.ok) throw new Error("Failed to send email");
+
       alert("Report sent to your email!");
     } catch (e) {
+      console.error(e);
       alert("Failed to send email");
     } finally {
       setExporting(false);
