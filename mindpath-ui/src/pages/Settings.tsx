@@ -38,7 +38,6 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
 
   // Profile State
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [fullName, setFullName] = useState("");
   const [language, setLanguage] = useState("en");
   const [country, setCountry] = useState("");
@@ -64,7 +63,6 @@ export default function Settings() {
   async function loadProfile() {
     try {
       const p = await getMe();
-      setProfile(p);
       setFullName(p.full_name || "");
       setLanguage(p.language || "en");
       setCountry(p.country || "");
@@ -77,13 +75,12 @@ export default function Settings() {
   async function saveProfile() {
     setSavingProfile(true);
     try {
-      const updated = await updateMe({
+      await updateMe({
         full_name: fullName,
         language,
         country,
         timezone
       });
-      setProfile(updated);
       alert("Profile updated!");
     } catch (e) {
       console.error(e);

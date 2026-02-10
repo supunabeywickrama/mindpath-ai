@@ -11,7 +11,9 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Menu,
+  X
 } from "lucide-react";
 
 const nav = [
@@ -33,6 +35,7 @@ export default function AppShell() {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +51,11 @@ export default function AppShell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [loc.pathname]);
+
   const handleSignOut = () => {
     clearAccessToken();
     clearUserId();
@@ -55,7 +63,6 @@ export default function AppShell() {
   };
 
   const border = "rgba(var(--border), 0.10)";
-  const panel = "rgba(var(--panel), 0.60)";
   const panelSolid = "rgba(var(--panel), 0.85)";
   const bgBlur = "rgba(var(--bg), 0.75)";
   const muted = "rgb(var(--muted))";
@@ -66,7 +73,7 @@ export default function AppShell() {
       style={{ background: "rgb(var(--bg))", color: "rgb(var(--text))" }}
     >
       <div className="flex">
-        {/* Sidebar */}
+        {/* Sidebar (Desktop) */}
         <aside
           className="hidden md:flex md:w-72 md:flex-col md:sticky md:top-0 md:h-screen backdrop-blur"
           style={{ borderRight: `1px solid ${border}`, background: panelSolid }}
@@ -128,20 +135,31 @@ export default function AppShell() {
         </aside>
 
         {/* Main */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-screen">
           {/* Topbar */}
           <header
-            className="sticky top-0 z-10 backdrop-blur"
+            className="sticky top-0 z-20 backdrop-blur"
             style={{
               borderBottom: `1px solid ${border}`,
               background: bgBlur,
             }}
           >
-            <div className="px-6 py-4 flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold">{title}</div>
-                <div className="text-xs" style={{ color: muted }}>
-                  Welcome back — take it one step at a time.
+            <div className="px-4 md:px-6 py-4 flex items-center justify-between">
+
+              <div className="flex items-center gap-3">
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setMobileNavOpen(true)}
+                  className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/5"
+                >
+                  <Menu size={20} />
+                </button>
+
+                <div>
+                  <div className="text-lg font-semibold">{title}</div>
+                  <div className="text-xs hidden sm:block" style={{ color: muted }}>
+                    Welcome back — take it one step at a time.
+                  </div>
                 </div>
               </div>
 
@@ -195,7 +213,7 @@ export default function AppShell() {
           </header>
 
           {/* Content */}
-          <main className="px-6 py-6">
+          <main className="flex-1 px-4 md:px-6 py-6 pb-20 md:pb-6">
             <div className="max-w-6xl mx-auto">
               <div
                 className="rounded-2xl p-0"
@@ -208,6 +226,72 @@ export default function AppShell() {
             </div>
           </main>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setMobileNavOpen(false)}
+            />
+
+            {/* Drawer */}
+            <div
+              className="relative w-72 h-full flex flex-col animate-in slide-in-from-left duration-200"
+              style={{ background: panelSolid, borderRight: `1px solid ${border}` }}
+            >
+              <div className="p-6 flex items-center justify-between">
+                <div>
+                  <div className="text-xl font-semibold tracking-tight">MindPath</div>
+                  <div className="text-xs mt-1" style={{ color: muted }}>
+                    Calm wellness companion
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 -mr-2 rounded-lg hover:bg-white/5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="px-3 pb-6 flex-1 overflow-y-auto">
+                <div className="text-xs px-3 mb-2" style={{ color: "rgba(var(--muted), 0.85)" }}>
+                  MAIN
+                </div>
+                <div className="space-y-1">
+                  {nav.map((n) => {
+                    const Icon = n.icon;
+                    return (
+                      <NavLink
+                        key={n.to}
+                        to={n.to}
+                        onClick={() => setMobileNavOpen(false)} // Close on navigate
+                        className={({ isActive }) =>
+                          [
+                            "flex items-center gap-3 px-3 py-3 rounded-xl border transition",
+                            "text-base", // slightly larger for touch
+                            isActive ? "bg-white/10" : "hover:bg-white/5",
+                          ].join(" ")
+                        }
+                        style={({ isActive }) => ({
+                          borderColor: isActive ? border : "transparent",
+                          color: "rgb(var(--text))",
+                        })}
+                      >
+                        <Icon size={20} style={{ color: "rgba(var(--text), 0.85)" }} />
+                        <span>{n.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
