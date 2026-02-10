@@ -5,10 +5,13 @@ import {
   listReminders,
   createReminder,
   deleteReminder,
-  type Reminder
+  type Reminder,
+  getMe,
+  updateMe,
+  type UserProfile
 } from "../lib/api";
 
-import { Trash2, Calendar, Repeat } from "lucide-react";
+import { Trash2, Calendar, Repeat, User, Globe, Clock, MapPin } from "lucide-react";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString([], {
@@ -34,6 +37,14 @@ export default function Settings() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Profile State
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [language, setLanguage] = useState("en");
+  const [country, setCountry] = useState("");
+  const [timezone, setTimezone] = useState("UTC");
+  const [savingProfile, setSavingProfile] = useState(false);
+
   // Form State
   const [title, setTitle] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
@@ -46,8 +57,41 @@ export default function Settings() {
 
   useEffect(() => {
     loadReminders();
+    loadProfile();
     loadTheme();
   }, []);
+
+  async function loadProfile() {
+    try {
+      const p = await getMe();
+      setProfile(p);
+      setFullName(p.full_name || "");
+      setLanguage(p.language || "en");
+      setCountry(p.country || "");
+      setTimezone(p.timezone || "UTC");
+    } catch (e) {
+      console.error("Failed to load profile", e);
+    }
+  }
+
+  async function saveProfile() {
+    setSavingProfile(true);
+    try {
+      const updated = await updateMe({
+        full_name: fullName,
+        language,
+        country,
+        timezone
+      });
+      setProfile(updated);
+      alert("Profile updated!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   function loadTheme() {
     // Try to get from computed style or local storage
@@ -159,7 +203,86 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        {/* Left Column */}
         <div className="lg:col-span-7 space-y-4">
+
+          {/* Profile Card */}
+          <Card title="Profile" subtitle="Personalize your experience">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-zinc-300 block mb-1">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 text-zinc-500" size={16} />
+                  <input
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    className="w-full h-10 rounded-xl bg-zinc-950/40 border border-white/10 pl-9 pr-3 outline-none focus:border-indigo-500/50 transition"
+                    placeholder="Your Name"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-zinc-300 block mb-1">Language</label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-2.5 text-zinc-500" size={16} />
+                    <select
+                      value={language}
+                      onChange={e => setLanguage(e.target.value)}
+                      className="w-full h-10 rounded-xl bg-zinc-950/40 border border-white/10 pl-9 pr-3 outline-none focus:border-indigo-500/50 transition appearance-none"
+                    >
+                      <option value="en">English</option>
+                      <option value="es">Spanish</option>
+                      <option value="fr">French</option>
+                      <option value="de">German</option>
+                      <option value="zh">Chinese</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-zinc-300 block mb-1">Country/Region</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-2.5 text-zinc-500" size={16} />
+                    <input
+                      value={country}
+                      onChange={e => setCountry(e.target.value)}
+                      className="w-full h-10 rounded-xl bg-zinc-950/40 border border-white/10 pl-9 pr-3 outline-none focus:border-indigo-500/50 transition"
+                      placeholder="e.g. United States"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-zinc-300 block mb-1">Timezone</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-2.5 text-zinc-500" size={16} />
+                  <select
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                    className="w-full h-10 rounded-xl bg-zinc-950/40 border border-white/10 pl-9 pr-3 outline-none focus:border-indigo-500/50 transition appearance-none"
+                  >
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">Eastern Time (US & Canada)</option>
+                    <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
+                    <option value="Europe/London">London</option>
+                    <option value="Asia/Colombo">Colombo</option>
+                    <option value="Asia/Tokyo">Tokyo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button onClick={saveProfile} disabled={savingProfile}>
+                  {savingProfile ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
           <Card title="Reminders" subtitle="Email notifications">
             <div className="space-y-4">
               {/* List */}
@@ -241,6 +364,7 @@ export default function Settings() {
           </Card>
         </div>
 
+        {/* Right Column */}
         <div className="lg:col-span-5 space-y-4">
           <Card title="Appearance" subtitle="Customize two-tone theme">
             <div className="space-y-4">

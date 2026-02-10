@@ -37,9 +37,21 @@ class UserOut(BaseModel):
     email: EmailStr
     created_at: datetime
     is_admin: bool = False
+    
+    # Profile
+    full_name: str | None = None
+    language: str = "en"
+    country: str | None = None
+    timezone: str = "UTC"
 
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    language: str = "en"
+    country: str | None = None
+    timezone: str = "UTC"
 
 class DevLoginIn(BaseModel):
     email: EmailStr

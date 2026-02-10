@@ -3,11 +3,30 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.deps import get_db
 from app.models import User
-from app.schemas import DevLoginIn, UserOut, UserCreate, UserLogin, Token
+from app.schemas import DevLoginIn, UserOut, UserCreate, UserLogin, Token, UserUpdate
 from app.auth import get_current_user, get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+@router.get("/me", response_model=UserOut)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.put("/me", response_model=UserOut)
+def update_user_me(payload: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    if payload.language is not None:
+        current_user.language = payload.language
+    if payload.country is not None:
+        current_user.country = payload.country
+    if payload.timezone is not None:
+        current_user.timezone = payload.timezone
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 @router.post("/register", response_model=Token)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
@@ -47,14 +66,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_user)):
-    # Admin check logic can remain simplistic or be enhanced
-    current_user_dict = {
-        "id": current_user.id,
-        "email": current_user.email,
-        "created_at": current_user.created_at,
-        "is_admin": current_user.email == "admin@mindpath.ai"
-    }
-    return current_user_dict
+    return current_user
 
 @router.post("/dev-login", response_model=UserOut)
 def dev_login(payload: DevLoginIn, db: Session = Depends(get_db)):

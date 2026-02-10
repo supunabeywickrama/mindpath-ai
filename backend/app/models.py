@@ -16,6 +16,12 @@ class User(Base):
     external_sub: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
     hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Profile settings
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    language: Mapped[str] = mapped_column(String(10), default="en")
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    timezone: Mapped[str] = mapped_column(String(50), default="UTC")
+
     reminders: Mapped[list["Reminder"]] = relationship(back_populates="user")
 
 class MoodEntry(Base):

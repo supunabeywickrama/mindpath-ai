@@ -136,6 +136,10 @@ export type UserProfile = {
   email: string;
   created_at: string;
   is_admin: boolean;
+  full_name?: string | null;
+  language?: string;
+  country?: string | null;
+  timezone?: string;
 };
 
 export async function register(email: string, password: string) {
@@ -155,6 +159,14 @@ export async function login(email: string, password: string) {
 export async function getMe() {
   const token = getAccessTokenStored() ?? undefined;
   return request<UserProfile>(`/api/auth/me`, { method: "GET" }, token);
+}
+
+export async function updateMe(payload: Partial<UserProfile>) {
+  const token = getAccessTokenStored() ?? undefined;
+  return request<UserProfile>(`/api/auth/me`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  }, token);
 }
 
 /* -------- JOURNAL -------- */
