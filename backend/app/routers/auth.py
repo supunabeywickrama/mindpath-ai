@@ -64,9 +64,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", response_model=UserOut)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+
 
 @router.post("/dev-login", response_model=UserOut)
 def dev_login(payload: DevLoginIn, db: Session = Depends(get_db)):
