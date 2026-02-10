@@ -3,8 +3,28 @@ import { useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { useAppStore } from "../store/useAppStore";
-import { getMe, createCheckoutSession, cancelSubscription, type UserProfile } from "../lib/api";
+import { getMe, signPayHere, upgradePremium, cancelSubscription, type UserProfile } from "../lib/api";
 import { Check, Sparkles, Loader2, Shield } from "lucide-react";
+
+// Helper to submit form programmatically
+function submitPayHereForm(data: any) {
+  const form = document.createElement("form");
+  form.setAttribute("method", "POST");
+  form.setAttribute("action", data.action_url);
+
+  // Add all fields
+  Object.keys(data).forEach(key => {
+    if (key === "action_url") return;
+    const hiddenField = document.createElement("input");
+    hiddenField.setAttribute("type", "hidden");
+    hiddenField.setAttribute("name", key);
+    hiddenField.setAttribute("value", data[key]);
+    form.appendChild(hiddenField);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+}
 
 const FEATURES = {
   free: [
@@ -141,14 +161,26 @@ export default function Pricing() {
   }
 
   async function handleCheckout() {
+    // Ask user for Mock vs PayHere
+    const useMock = confirm("Use Mock Payment (Instant) instead of PayHere? (Cancel for PayHere)");
+
     setActionLoading(true);
     try {
-      const { url } = await createCheckoutSession(period);
-      // Redirect
-      window.location.href = url;
+      if (useMock) {
+        // Mock Flow
+        await new Promise(r => setTimeout(r, 1000)); // Fake delay
+        const updated = await upgradePremium();
+        setUser(updated);
+        alert("Mock Payment of LKR 10.00 Successful! You are now Premium.");
+      } else {
+        // PayHere Flow
+        const formData = await signPayHere(period);
+        submitPayHereForm(formData);
+      }
     } catch (e: any) {
       console.error(e);
-      alert("Failed to start checkout");
+      alert("Failed to process payment");
+    } finally {
       setActionLoading(false);
     }
   }
@@ -243,12 +275,6 @@ export default function Pricing() {
           onSelect={() => { }}
           buttonText="Your current plan"
         />
-        {/* Trial Logic: In Stripe, we just give trial period on subscription. So 'Trial' button is redundant?
-            Usually we have Free vs Premium (with trial).
-            The user asked for 'Free Trial 7 days only'.
-            Let's merge Trial into Premium as "Start Trial" if user is free.
-         */}
-        { /* We keep the 3-card layout as requested before, but modify behavior */}
 
         <PlanCard
           name="Trial (Premium)"
