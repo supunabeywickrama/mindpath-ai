@@ -343,3 +343,38 @@ export async function deleteReminder(id: number) {
     method: "DELETE",
   });
 }
+
+/* -------- HABITS -------- */
+export interface Habit {
+  id: number;
+  name: string;
+  goal: string;
+  active: boolean;
+  created_at: string;
+  completed_dates: string[]; // YYYY-MM-DD
+}
+
+export async function listHabits() {
+  return request<Habit[]>("/api/habits", { method: "GET" });
+}
+
+export async function createHabit(data: { name: string; goal: string }) {
+  return request<Habit>("/api/habits", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteHabit(id: number) {
+  return request<{ ok: boolean }>(`/api/habits/${id}`, { method: "DELETE" });
+}
+
+export async function toggleHabit(id: number, date: string) {
+  return request<{ habit_id: number; date: string; done: boolean }>(
+    `/api/habits/${id}/toggle`,
+    {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    }
+  );
+}

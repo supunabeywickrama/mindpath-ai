@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router, prefix="/api")
     app.include_router(insights_router, prefix="/api")
     app.include_router(reminders_router, prefix="/api")
+    app.include_router(habits.router, prefix="/api")
 
     @app.on_event("startup")
     async def startup_event():
