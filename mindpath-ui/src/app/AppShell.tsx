@@ -14,7 +14,8 @@ import {
   LogOut,
   User as UserIcon,
   Menu,
-  X
+  X,
+  Mic
 } from "lucide-react";
 
 const nav = [
@@ -24,6 +25,7 @@ const nav = [
   { to: "/app/journal", label: "Journal", icon: BookOpen },
   { to: "/app/insights", label: "Insights", icon: LineChart },
   { to: "/app/chat", label: "AI Assistant", icon: MessagesSquare },
+  { to: "/app/virtual-assistant", label: "Virtual Friend", icon: Mic },
   { to: "/app/pricing", label: "Pricing", icon: CreditCard },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];

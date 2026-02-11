@@ -14,6 +14,7 @@ import Register from "../pages/Register";
 import RequireAuth from "../components/RequireAuth";
 import AuthCallback from "../pages/AuthCallback";
 import RouteError from "../pages/RouteError";
+import VirtualAssistant from "../pages/VirtualAssistant";
 
 
 
@@ -26,9 +27,9 @@ export const router = createBrowserRouter([
   {
     path: "/app",
     element: (<RequireAuth>
-                    <AppShell />
-              </RequireAuth>
-              ),
+      <AppShell />
+    </RequireAuth>
+    ),
     children: [
       { path: "dashboard", element: <Dashboard /> },
       { path: "mood", element: <MoodLog /> },
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: "chat", element: <Chat /> },
       { path: "pricing", element: <Pricing /> },
       { path: "settings", element: <Settings /> },
+      { path: "virtual-assistant", element: <VirtualAssistant /> },
     ],
   },
 ]);

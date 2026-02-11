@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -268,6 +269,117 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
     db.commit()
 
     return {"reply": reply, "created_at": datetime.utcnow().isoformat(), "thread_id": thread.id}
+
+
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "alloy"
+
+
+@router.post("/tts")
+def text_to_speech(payload: TTSRequest, user: User = Depends(get_current_user)):
+    """
+    Generates audio from text using OpenAI TTS.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
+
+    try:
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice=payload.voice,
+            input=payload.text,
+        )
+        return Response(content=response.content, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"TTS ERROR: {e}")
+        raise HTTPException(status_code=500, detail=f"TTS failed: {str(e)}")
+
+
+class VirtualChatRequest(BaseModel):
+    message: str
+    user_emotion: str = "neutral"
+    history: list[ChatMessageIn] = []
+
+
+class VirtualChatResponse(BaseModel):
+    reply: str
+    assistant_emotion: str
+
+
+@router.post("/virtual-chat", response_model=VirtualChatResponse)
+def virtual_chat(
+    payload: VirtualChatRequest, user: User = Depends(get_current_user)
+):
+    text = payload.message.strip()
+    emotion = payload.user_emotion.lower()
+    
+    if not text:
+         return {"reply": "I'm listening...", "assistant_emotion": "neutral"}
+
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
+
+    # 1) Safety check
+    sr = detect_crisis(text)
+    if sr.is_crisis:
+        return {
+            "reply": "I'm concerned about what you just said. Please, if you're in danger, reach out to emergency services immediately.",
+            "assistant_emotion": "concerned"
+        }
+
+    # 2) Build System Prompt
+    base_system = (
+        "You are a warm, empathetic, and supportive virtual friend. "
+        "Keep your responses SHORT (1-2 sentences max) and conversational, suitable for spoken dialogue. "
+        "Do not use markdown or lists. Just talk naturally."
+    )
+    
+    emotion_context = ""
+    if emotion in ["sad", "angry", "fearful", "disgusted"]:
+        emotion_context = f"The user looks {emotion}. Be extra gentle, validating, and supportive. acknowledged their visible emotion."
+    elif emotion in ["happy", "surprised"]:
+        emotion_context = f"The user looks {emotion}. Match their energy and be positive."
+    else:
+        emotion_context = "The user looks neutral. Be calm and friendly."
+
+    final_system = f"{base_system}\n{emotion_context}"
+
+    # 3) Build Messages
+    input_msgs = [{"role": "system", "content": final_system}]
+    for h in payload.history[-6:]:  # Keep history short for voice
+        role = h.role if h.role in ("user", "assistant") else "user"
+        input_msgs.append({"role": role, "content": h.content})
+    input_msgs.append({"role": "user", "content": text})
+
+    # 4) Call LLM
+    try:
+        # o1-mini / o3-mini models do not support temperature != 1
+        # It's safest to omit it or set to 1 if using those models. 
+        # Since we might be using o1-mini via settings.openai_model, we'll omit it locally 
+        # or use a default if your library/model supports it. 
+        # For wide compatibility with reasoning models, we remove explicit temperature or set to 1.
+        
+        res = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=input_msgs,
+            # temperature=1, # Default is usually 1, or forced to 1 by o1-mini
+        )
+        reply = res.choices[0].message.content.strip()
+        
+        # Determine assistant emotion based on reply content (simple heuristic or separate LLM call - keeping simple for now)
+        # Default to 'neutral' or 'happy' unless mapped
+        assistant_emotion = "neutral"
+        if any(x in reply.lower() for x in ["sorry", "sad", "hard", "tough", "here for you"]):
+            assistant_emotion = "concerned"
+        elif any(x in reply.lower() for x in ["great", "awesome", "happy", "good news"]):
+            assistant_emotion = "happy"
+            
+        return {"reply": reply, "assistant_emotion": assistant_emotion}
+
+    except Exception as e:
+        print(f"VIRTUAL CHAT ERROR: {e}")
+        raise HTTPException(status_code=502, detail=f"OpenAI request failed: {e}")
 
 
 class TransformRequest(BaseModel):

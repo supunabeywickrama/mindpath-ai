@@ -255,6 +255,13 @@ export async function aiChat(
   });
 }
 
+export async function virtualChat(message: string, user_emotion: string, history: any[]) {
+  return request<{ reply: string; assistant_emotion: string }>(`/api/ai/virtual-chat`, {
+    method: "POST",
+    body: JSON.stringify({ message, user_emotion, history }),
+  });
+}
+
 export async function transcribeAudio(audioBlob: Blob) {
   const formData = new FormData();
   formData.append("file", audioBlob, "recording.webm");
@@ -276,6 +283,21 @@ export async function transcribeAudio(audioBlob: Blob) {
   }
 
   return res.json() as Promise<{ text: string }>;
+}
+
+export async function textToSpeech(text: string, voice: string = "alloy") {
+  const token = getAccessTokenStored();
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/api/ai/tts`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ text, voice }),
+  });
+
+  if (!res.ok) throw new Error("TTS failed");
+  return res.blob();
 }
 
 export async function listChatThreads() {
