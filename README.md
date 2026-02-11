@@ -1,8 +1,145 @@
-# MindPath – AI Depression Support Platform
+# MindPath – AI Depression Support Platform 🧠💙
 
-A web-based AI-powered mental wellness platform built using React and FastAPI.
-The system provides mood tracking, AI chat support using LLM + RAG,
-and a virtual AI assistant with voice and face.
+MindPath is a **holistic mental wellness platform** designed to provide accessible, AI-powered support for individuals navigating mental health challenges. It combines **journaling, mood tracking, habit formation, and an empathetic AI companion** to create a safe space for emotional regulation and personal growth.
 
-⚠️ This system does NOT diagnose or treat depression.
-It provides support, awareness, and guidance only.
+> **⚠️ Disclaimer:** MindPath is a supportive tool and **NOT** a replacement for professional medical advice, diagnosis, or treatment. In case of emergency, please contact local authorities or a suicide prevention hotline.
+
+---
+
+## 🌟 Key Features
+
+### 🤖 **Empathetic AI Companion**
+- **Real-time Chat:** engage in natural conversations with a supportive AI trained to be non-judgmental and calming.
+- **Voice Interaction:** Speak to the AI using **OpenAI Whisper** for speech-to-text.
+- **Context-Aware:** The AI remembers past conversations and journal entries using **RAG (Retrieval-Augmented Generation)** to provide personalized support.
+
+### 🛡️ **Safety Guardrails**
+- **Crisis Detection:** Real-time analysis of user input using **Regex patterns** to detect self-harm or suicidal ideation.
+- **Immediate Intervention:** Automatically blocks AI generation and provides immediate crisis resources and helplines if danger is detected.
+
+### 📝 **Smart Journaling**
+- **AI Analysis:** Automatically tags emotions and summarizes entries.
+- **Actionable Insights:** The AI suggests small, concrete steps based on your journal content to help you move forward.
+- **Transformation:** Rewrites negative thoughts into self-compassionate language using LLMs.
+
+### 📊 **Mood & Habit Tracking**
+- **Visual Analytics:** Interactive charts to track mood trends over time.
+- **Habit Builder:** Set and track daily wellness habits (e.g., "Drink water," "Meditate").
+- **Gamification:** Earn streaks and visualize progress to stay motivated.
+
+### 🔔 **Smart Reminders**
+- **AI-Generated Emails:** Receive friendly, motivating email reminders for tasks, generated uniquely each time by the AI to avoid notification fatigue.
+
+---
+
+## 🛠️ Technology Stack
+
+### **Frontend**
+- **Framework:** [React 19](https://react.dev/) with [Vite](https://vitejs.dev/)
+- **Language:** TypeScript
+- **Styling:** [TailwindCSS](https://tailwindcss.com/)
+- **State Management:** React Hooks
+- **Visualization:** [Recharts](https://recharts.org/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+
+### **Backend**
+- **Framework:** [FastAPI](https://fastapi.tiangolo.com/) (Python)
+- **Database:** [PostgreSQL](https://www.postgresql.org/)
+- **ORM:** SQLAlchemy (Async)
+- **Vector Search:** `pgvector` extension for RAG
+- **Authentication:** [Asgardeo](https://wso2.com/asgardeo/) (OIDC / OAuth2)
+
+### **AI & ML**
+- **LLM:** OpenAI GPT-4o / GPT-3.5-turbo (via OpenAI API)
+- **Speech-to-Text:** OpenAI Whisper
+- **Embeddings:** OpenAI `text-embedding-3-small`
+- **RAG Pipeline:** Custom implementation using Postgres vector similarity search.
+
+---
+
+## 🧠 Algorithms & Logic
+
+### **1. Retrieval-Augmented Generation (RAG)**
+MindPath uses RAG to give the AI long-term memory:
+1.  **Embedding:** User messages and journal entries are converted into vector embeddings using OpenAI.
+2.  **Storage:** These vectors are stored in PostgreSQL using the `pgvector` extension.
+3.  **Retrieval:** When a user chats, the system performs a **Cosine Similarity Search** to find the most relevant past memories or medical knowledge chunks.
+4.  **Generation:** These retrieved chunks are injected into the LLM's system prompt to generate a context-aware response.
+
+### **2. Crisis Detection Algorithm**
+A deterministic safety layer runs *before* any AI processing:
+-   **Input Scanning:** Every user message is scanned against a predefined list of high-risk Regex patterns (e.g., related to self-harm, suicide).
+-   **Trigger:** If a match is found, the standard AI pipeline is **bypassed**.
+-   **Response:** A hard-coded, safe response with emergency contact numbers is returned immediately.
+
+### **3. Sentiment & Insight Extraction**
+-   **Transformation Pipeline:** Journal entries are processed through specialized prompts to:
+    -   *Summarize* content.
+    -   *Rewrite* negative self-talk.
+    -   *Plan* actionable steps.
+
+---
+
+## 🎯 Target Audience
+
+-   **Individuals** seeking a private, judgment-free space to express their thoughts.
+-   **Therapy Clients** who want to track their moods and habits between sessions.
+-   **Mental Health Advocates** looking for tools to support daily wellness.
+-   **Anyone** interested in using AI for personal growth and emotional intelligence.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+-   Node.js (v18+)
+-   Python (v3.10+)
+-   PostgreSQL (with `pgvector` extension installed)
+
+### Backend Setup
+1.  Navigate to the backend folder:
+    ```bash
+    cd backend
+    ```
+2.  Create a virtual environment and activate it:
+    ```bash
+    python -m venv .venv
+    # Windows
+    .venv\Scripts\activate
+    # Mac/Linux
+    source .venv/bin/activate
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Set up environment variables in `.env`:
+    ```env
+    DATABASE_URL=postgresql+asyncpg://user:pass@localhost/mindpath
+    OPENAI_API_KEY=sk-...
+    ASGARDEO_CLIENT_ID=...
+    ASGARDEO_CLIENT_SECRET=...
+    ```
+5.  Run the server:
+    ```bash
+    uvicorn app.main:app --reload
+    ```
+
+### Frontend Setup
+1.  Navigate to the frontend folder:
+    ```bash
+    cd mindpath-ui
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
