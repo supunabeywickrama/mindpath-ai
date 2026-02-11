@@ -166,7 +166,7 @@ export default function VirtualAssistant() {
                 <button
                     onClick={toggleSettings}
                     className="p-2 rounded-full bg-gray-800/50 hover:bg-gray-800 text-white transition-colors"
-                    title="Assistant Settings"
+                    title="Sela Settings"
                 >
                     {showSettings ? <X size={20} /> : <Settings2 size={20} />}
                 </button>
@@ -175,7 +175,7 @@ export default function VirtualAssistant() {
             {/* Settings Panel */}
             {showSettings && (
                 <div className="absolute top-16 left-6 z-20 p-4 bg-gray-900/95 border border-gray-700 rounded-xl shadow-xl w-64 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
-                    <h3 className="text-sm font-semibold text-white mb-3">Customization</h3>
+                    <h3 className="text-sm font-semibold text-white mb-3">Sela Customization</h3>
 
 
 

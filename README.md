@@ -8,10 +8,11 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 
 ## 🌟 Key Features
 
-### 🤖 **Empathetic AI Companion**
-- **Real-time Chat:** engage in natural conversations with a supportive AI trained to be non-judgmental and calming.
-- **Voice Interaction:** Speak to the AI using **OpenAI Whisper** for speech-to-text.
-- **Context-Aware:** The AI remembers past conversations and journal entries using **RAG (Retrieval-Augmented Generation)** to provide personalized support.
+### 🤖 **Sela - Virtual AI Friend**
+- **Real-time Voice Chat:** Speak naturally to **Sela**, your virtual companion. She replies with a human-like voice using **OpenAI Text-to-Speech**.
+- **Emotion Recognition:** Sela can *see* you! Using **MediaPipe Face Landmarker**, she detects your facial expressions (happy, sad, etc.) and adjusts her empathy level accordingly.
+- **Expressive Avatar:** Sela visualizes her responses with a realistic, animated avatar that lip-syncs to her voice.
+- **Context-Aware Memory:** She remembers past conversations and journal entries (RAG) to provide deeply personalized support.
 
 ### 🛡️ **Safety Guardrails**
 - **Crisis Detection:** Real-time analysis of user input using **Regex patterns** to detect self-harm or suicidal ideation.
@@ -40,6 +41,7 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 - **Styling:** [TailwindCSS](https://tailwindcss.com/)
 - **State Management:** React Hooks
 - **Visualization:** [Recharts](https://recharts.org/)
+- **Computer Vision:** [MediaPipe Tasks Vision](https://developers.google.com/mediapipe/solutions/vision) (Face Landmarker)
 - **Icons:** [Lucide React](https://lucide.dev/)
 
 ### **Backend**
@@ -52,6 +54,7 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 ### **AI & ML**
 - **LLM:** OpenAI GPT-4o / GPT-3.5-turbo (via OpenAI API)
 - **Speech-to-Text:** OpenAI Whisper
+- **Text-to-Speech:** OpenAI TTS (hd model)
 - **Embeddings:** OpenAI `text-embedding-3-small`
 - **RAG Pipeline:** Custom implementation using Postgres vector similarity search.
 

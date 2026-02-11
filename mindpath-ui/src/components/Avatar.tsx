@@ -39,7 +39,7 @@ export default function Avatar({ emotion, isSpeaking, audioVolume }: AvatarProps
             <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-white/10 relative z-10 bg-gray-900">
                 <img
                     src={imageSrc}
-                    alt="Virtual Assistant"
+                    alt="Sela"
                     className={clsx(
                         "w-full h-full object-cover transition-transform duration-100",
                         isMouthOpen ? "scale-105" : "scale-100"
