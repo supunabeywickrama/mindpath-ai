@@ -50,6 +50,9 @@ async function request<T>(
   token?: string
 ): Promise<T> {
   const userId = getUserId();
+  const storedToken = getAccessTokenStored();
+  const authToken = token || storedToken;
+
   const headers = new Headers(options.headers || {});
 
   const hasBody = options.body !== undefined && options.body !== null;
@@ -57,8 +60,8 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  if (authToken) {
+    headers.set("Authorization", `Bearer ${authToken}`);
   }
   if (userId) {
     headers.set("X-User-Id", userId);

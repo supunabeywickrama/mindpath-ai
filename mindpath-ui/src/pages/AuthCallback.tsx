@@ -1,53 +1,52 @@
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@asgardeo/auth-react";
 import { useNavigate } from "react-router-dom";
-import { devLogin, setUserId } from "../lib/api";
+import { setAccessToken, setUserId, getMe } from "../lib/api";
+import { Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
-  const { state, signIn, getBasicUserInfo } = useAuthContext();
+  const { state, getAccessToken } = useAuthContext();
   const nav = useNavigate();
-  const [status, setStatus] = useState("Initializing...");
+  const [status, setStatus] = useState("Verifying authentication...");
 
   useEffect(() => {
-    (async () => {
-      if (state.isLoading) {
-        setStatus("Verifying authentication...");
-        return;
-      }
+    async function sync() {
+      if (state.isLoading) return;
 
       if (state.isAuthenticated) {
         try {
-          console.log("AuthCallback: Authenticated", state);
-          setStatus("Getting user info...");
-          const info = await getBasicUserInfo();
-          console.log("AuthCallback: User info", info);
-
-          if (info.email) {
-            setStatus("Syncing with backend...");
-            const user = await devLogin(info.email);
-            console.log("AuthCallback: Backend user", user);
+          setStatus("Syncing session...");
+          const token = await getAccessToken();
+          if (token) {
+            setAccessToken(token);
+            // Fetch internal user ID
+            const user = await getMe();
             setUserId(user.id);
+            // Redirect
+            nav("/app/dashboard", { replace: true });
+          } else {
+            setStatus("No access token available.");
           }
-
-          console.log("AuthCallback: Redirecting...");
-          setStatus("Redirecting...");
-          nav("/app/dashboard", { replace: true });
         } catch (e) {
-          console.error("Auth callback failed", e);
-          setStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
+          console.error("Callback sync failed", e);
+          setStatus("Failed to sync session.");
         }
       } else {
+        // If we land here but aren't authenticated, maybe redirect to login?
+        // Or we are just waiting?
         setStatus("Waiting for authentication...");
-        console.log("AuthCallback: Waiting...", state);
+        // If it takes too long, user might be stuck. 
+        // But Asgardeo SDK should handle the code exchange.
       }
-    })();
-  }, [state.isAuthenticated, state.isLoading, getBasicUserInfo, nav, state]);
+    }
+    sync();
+  }, [state.isAuthenticated, state.isLoading, getAccessToken, nav]);
 
   return (
-    <div className="min-h-screen grid place-items-center text-zinc-200">
+    <div className="min-h-screen grid place-items-center bg-zinc-950 text-zinc-200">
       <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-        <div>{status}</div>
+        <Loader2 className="animate-spin text-indigo-500" size={32} />
+        <div className="text-sm text-zinc-400">{status}</div>
       </div>
     </div>
   );

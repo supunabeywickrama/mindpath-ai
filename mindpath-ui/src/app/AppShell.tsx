@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { useAuthContext } from "@asgardeo/auth-react";
 import { getMe, type UserProfile, clearAccessToken, clearUserId } from "../lib/api";
 import {
   LayoutDashboard,
@@ -27,11 +28,10 @@ const nav = [
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
-// ... inside AppShell component ...
 export default function AppShell() {
+  const { signOut } = useAuthContext();
   const loc = useLocation();
   const title = nav.find((n) => loc.pathname.startsWith(n.to))?.label ?? "MindPath";
-  const navigate = useNavigate();
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -57,9 +57,11 @@ export default function AppShell() {
   }, [loc.pathname]);
 
   const handleSignOut = () => {
+    // Clear local state first to be sure
     clearAccessToken();
     clearUserId();
-    navigate("/login");
+    // Redirects to Asgardeo logout, then back to VITE_ASGARDEO_SIGN_OUT_REDIRECT_URL
+    signOut();
   };
 
   const border = "rgba(var(--border), 0.10)";
