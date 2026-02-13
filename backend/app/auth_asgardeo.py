@@ -33,6 +33,13 @@ async def _get_jwks():
         _jwks_cache = r.json()
         return _jwks_cache
 
+async def _get_user_info(token: str):
+    userinfo_url = settings.asgardeo_issuer.replace("/token", "/userinfo")
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(userinfo_url, headers={"Authorization": f"Bearer {token}"})
+        r.raise_for_status()
+        return r.json()
+
 async def get_current_user_asgardeo(
     db: Session = Depends(get_db),
     authorization: str | None = Header(default=None),
@@ -52,8 +59,9 @@ async def get_current_user_asgardeo(
             issuer=settings.asgardeo_issuer,
             options={"verify_at_hash": False},
         )
-        print(f"DEBUG: Asgardeo Token Payload: {payload}")
+        # print(f"DEBUG: Asgardeo Token Payload: {payload}")
     except Exception as e:
+        print(f"DEBUG: Asgardeo Token Validation Failed: {e}")
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
     sub = payload.get("sub")
@@ -61,17 +69,53 @@ async def get_current_user_asgardeo(
 
     if not sub:
         raise HTTPException(status_code=401, detail="Token missing sub")
+    
+    # If email is missing in token, try UserInfo endpoint
+    if not email:
+        try:
+            print("DEBUG: Email missing in token, fetching UserInfo...")
+            user_info = await _get_user_info(token)
+            # print(f"DEBUG: UserInfo response: {user_info}")
+            email = user_info.get("email") or user_info.get("preferred_username")
+        except Exception as e:
+            print(f"ERROR: Failed to fetch UserInfo: {e}")
 
     # 1. Try to find by external_sub
     user = db.query(User).filter(User.external_sub == sub).first()
 
     if user:
-        # Fix legacy "unknown" email if present (to satisfy Pydantic validation)
-        if user.email == "unknown":
-            user.email = f"u_{sub}@placeholder.com"
-            db.add(user)
-            db.commit()
-            db.refresh(user)
+        # Check if we need to update email
+        # If we have a valid email from provider, and it differs from DB (or DB is placeholder/unknown)
+        # Check if we need to update email
+        # If we have a valid email from provider, and it differs from DB (or DB is placeholder/unknown)
+        if email and (user.email != email or user.email.startswith("u_") or user.email == "unknown"):
+            # Check for collision
+            existing_user = db.query(User).filter(User.email == email).first()
+            if existing_user and existing_user.id != user.id:
+                print(f"DEBUG: Email {email} exists on user {existing_user.id}. Current user is {user.id}.")
+                if not existing_user.external_sub:
+                    print(f"DEBUG: Linking existing user {existing_user.id} to sub {sub} and detaching user {user.id}")
+                    # Unlink current user
+                    user.external_sub = None
+                    db.add(user)
+                    db.commit()
+                    
+                    # Link existing user
+                    existing_user.external_sub = sub
+                    db.add(existing_user)
+                    db.commit()
+                    db.refresh(existing_user)
+                    return existing_user
+                else:
+                    print(f"WARNING: User {existing_user.id} has email {email} AND sub {existing_user.external_sub}. Cannot link.")
+                    # Fallback: Do not update email, return current user (user A)
+            else:
+                # No collision, safe to update
+                print(f"DEBUG: Updating user email from {user.email} to {email}")
+                user.email = email
+                db.add(user)
+                db.commit()
+                db.refresh(user)
         return user
 
     # 2. If not found, try to find by email (legacy/dev link)
