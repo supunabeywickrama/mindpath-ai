@@ -65,30 +65,38 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 
 ---
 
-## �🛠️ Technology Stack
+## 🛠️ Technology Stack & Keywords
 
-### **Frontend**
-- **Framework:** [React 19](https://react.dev/) with [Vite](https://vitejs.dev/)
-- **Language:** TypeScript
-- **Styling:** [TailwindCSS](https://tailwindcss.com/)
-- **State Management:** React Hooks
-- **Visualization:** [Recharts](https://recharts.org/)
-- **Computer Vision:** [MediaPipe Tasks Vision](https://developers.google.com/mediapipe/solutions/vision) (Face Landmarker)
-- **Icons:** [Lucide React](https://lucide.dev/)
+### **Frontend (Client-Side)**
+- **Core Framework:** [React 19](https://react.dev/) (Latest)
+- **Build Tool:** [Vite](https://vitejs.dev/) (High-performance bundler)
+- **Language:** TypeScript (Strict type safety)
+- **Styling:** [TailwindCSS v3](https://tailwindcss.com/) with PostCSS & Autoprefixer
+- **State & Routing:** React Hooks, React Router DOM v6
+- **Visualization:** [Recharts](https://recharts.org/) (Responsive charting library)
+- **AI/Vision:** [@mediapipe/tasks-vision](https://developers.google.com/mediapipe/solutions/vision) (Google's Face Landmarker for emotion detection)
+- **Authentication:** [@asgardeo/auth-react](https://github.com/asgardeo/asgardeo-auth-react-sdk) (OIDC/OAuth2 SDK)
+- **Utilities:** `zod` (Schema validation), `clsx` (Class name merging), `lucide-react` (Icons)
 
-### **Backend**
-- **Framework:** [FastAPI](https://fastapi.tiangolo.com/) (Python)
-- **Database:** [PostgreSQL](https://www.postgresql.org/)
-- **ORM:** SQLAlchemy (Async)
-- **Vector Search:** `pgvector` extension for RAG
-- **Authentication:** [Asgardeo](https://wso2.com/asgardeo/) (OIDC / OAuth2)
+### **Backend (Server-Side)**
+- **API Framework:** [FastAPI](https://fastapi.tiangolo.com/) (High-performance Python web framework)
+- **Server:** [Uvicorn](https://www.uvicorn.org/) (ASGI server)
+- **Database:** PostgreSQL with `pgvector` extension
+- **ORM:** [SQLAlchemy 2.0](https://www.sqlalchemy.org/) (Async/Await support)
+- **Migration:** Alembic (Database schema migrations)
+- **Validation:** Pydantic v2 (Data modeling)
+- **AI Integration:** `openai` (Official Python SDK), `requests`, `httpx` (Async HTTP client)
+- **Security:** `python-jose` (JWT encoding/decoding), `python-multipart` (Form data parsing)
+- **Async:** `asyncio`, `greenlet`
 
-### **AI & ML**
-- **LLM:** OpenAI GPT-4o / GPT-3.5-turbo (via OpenAI API)
-- **Speech-to-Text:** OpenAI Whisper
-- **Text-to-Speech:** OpenAI TTS (hd model)
-- **Embeddings:** OpenAI `text-embedding-3-small`
-- **RAG Pipeline:** Custom implementation using Postgres vector similarity search.
+### **Key Technical Concepts**
+- **RAG (Retrieval-Augmented Generation):** Enhancing LLM responses with retrieved memory chunks.
+- **Vector Embeddings:** Semantic search using high-dimensional vectors.
+- **WebSocket / Real-time:** Low-latency communication for voice chat.
+- **OIDC (OpenID Connect):** Secure identity layer on top of OAuth 2.0.
+- **Prompt Engineering:** Structuring inputs to guide Large Language Models.
+- **Crisis Intervention:** Regex-based deterministic safety layers.
+- **Multimodal AI:** Combining text, audio, and visual inputs for a holistic interaction.
 
 ---
 
