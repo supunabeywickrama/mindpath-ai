@@ -120,13 +120,63 @@ export default function VirtualAssistant() {
             setResponse(reply);
 
             // C) TTS & Playback
-            const ttsBlob = await textToSpeech(reply, voice);
-            playResponse(ttsBlob);
+            try {
+                const ttsBlob = await textToSpeech(reply, voice);
+                playResponse(ttsBlob);
+            } catch (ttsErr) {
+                console.warn("Backend TTS failed (likely quota), falling back to Browser TTS", ttsErr);
+                speakWithBrowser(reply);
+            }
 
         } catch (err) {
             console.error("AI loop failed", err);
-            setTranscript("Error processing request. Check connection.");
+            setTranscript("Error processing. (Check API Quota/Logs)");
         }
+    };
+
+    // Browser TTS Fallback
+    const speakWithBrowser = (text: string) => {
+        if (!('speechSynthesis' in window)) {
+            alert("Browser does not support TTS.");
+            return;
+        }
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Try to select a decent voice
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Samantha"));
+        if (preferredVoice) utterance.voice = preferredVoice;
+
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => {
+            setIsSpeaking(true);
+            // Simulate volume for avatar animation since we can't easily visualize utterance
+            simulateVolume();
+        };
+
+        utterance.onend = () => {
+            setIsSpeaking(false);
+            setOutputStream(null); // Stop simulator
+        };
+
+        window.speechSynthesis.speak(utterance);
+    };
+
+    // Simulate volume for browser TTS
+    const simulateVolume = () => {
+        // Create a fake oscillator to drive the visualizer or just manually pulse?
+        // Since useAudioVisualizer takes a MediaStream, let's just make a fake one.
+        // OR better: Update Avatar to accept a "simulated" mode? 
+        // Actually, let's create a silent oscillator connected to a destination just to satisfy the hook type,
+        // BUT the hook won't see real audio. 
+        // INSTEAAD: We will modify the Avatar component to animate automatically if audioVolume is 0 but isSpeaking is true.
+        // For now, let's just set isSpeaking. The Avatar update is next.
     };
 
     // 4. Audio Playback with Visualizer Hook
