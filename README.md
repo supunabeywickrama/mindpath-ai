@@ -8,7 +8,7 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 
 ## 🌟 Key Features
 
-### 🤖 **Sela - Virtual AI Friend**
+### 🤖 **Sela - Virtual AI Assistant**
 - **Real-time Voice Chat:** Speak naturally to **Sela**, your virtual companion. She replies with a human-like voice using **OpenAI Text-to-Speech**.
 - **Emotion Recognition:** Sela can *see* you! Using **MediaPipe Face Landmarker**, she detects your facial expressions (happy, sad, etc.) and adjusts her empathy level accordingly.
 - **Expressive Avatar:** Sela visualizes her responses with a realistic, animated avatar that lip-syncs to her voice.
@@ -33,7 +33,39 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 
 ---
 
-## 🛠️ Technology Stack
+## � Application Modules
+
+### **1. Dashboard (Home)**
+- **Overview:** Your daily wellness command center.
+- **Features:** Quick access to mood logging, recent journal entries, daily quotes, and safety streaks.
+
+### **2. Virtual Assistant (Sela)**
+- **Interactive Avatar:** A lifelike avatar that speaks and listens with realistic "talking" animations.
+- **Voice Interaction:** Hands-free conversation for emotional support.
+- **Emotional Resonance:** The interface adapts its glowing aura based on the conversation's emotional tone.
+
+### **3. Insights (Analytics)**
+- **Deep Dive:** Visualize your mental health data over 7, 14, or 30 days.
+- **Charts:**
+    - *Mood Flow:* Line graph showing emotional ups and downs.
+    - *Sentiment Distribution:* Pie chart of positive vs. negative entries.
+    - *Habit Correlations:* Bar charts linking sleep/exercise to mood scores.
+- **Reports:**
+    - **Export as PDF:** Generate a comprehensive mental health report with a single click.
+    - **Email Integration:** Send the PDF report directly to your registered email address for your records or to share with a therapist.
+
+### **4. Journal & Transformation**
+- **Smart Entry:** Free-text journaling with AI auto-tagging.
+- **Reframing:** One-click "Rewrite" to turn negative thoughts into positive affirmations.
+- **Action Plans:** Precise, AI-generated steps to tackle specific problems mentioned in your journal.
+
+### **5. Profile & Settings**
+- **Personalization:** Customize Sela's voice, your theme preferences, and notification settings.
+- **Data Management:** Manage your account details and subscription status.
+
+---
+
+## �🛠️ Technology Stack
 
 ### **Frontend**
 - **Framework:** [React 19](https://react.dev/) with [Vite](https://vitejs.dev/)
