@@ -109,6 +109,11 @@ export default function AuthCallback() {
             <div className="text-xs text-zinc-600 mt-2 max-w-xs break-all">
               {state.isLoading ? "Loading..." : "Waiting..."}
             </div>
+            <div className="mt-8 p-4 bg-zinc-900 rounded text-left text-xs font-mono text-zinc-500 w-full max-w-lg overflow-auto">
+              <p className="font-bold text-zinc-400 mb-2">Debug Info:</p>
+              <pre>{JSON.stringify(state, null, 2)}</pre>
+              <p className="mt-2">URL Code: {new URLSearchParams(location.search).get("code") ? "Present" : "Missing"}</p>
+            </div>
           </>
         )}
       </div>

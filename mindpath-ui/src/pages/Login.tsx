@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
 import { useAuthContext } from "@asgardeo/auth-react";
 import { setAccessToken, setUserId, getMe } from "../lib/api";
 
@@ -48,11 +48,15 @@ export default function Login() {
 
         <div className="rounded-2xl bg-zinc-900/60 border border-white/10 p-8 shadow-sm space-y-6">
           <button
-            onClick={() => signIn()}
-            className="w-full h-12 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-medium flex items-center justify-center gap-2 transition-colors"
+            disabled={state.isLoading}
+            onClick={() => {
+              console.log("Sign in clicked...");
+              signIn().catch(e => console.error("Sign in failed", e));
+            }}
+            className="w-full h-12 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center justify-center gap-2 transition-colors"
           >
-            <LogIn size={20} />
-            Sign In with Asgardeo
+            {state.isLoading ? <Loader2 className="animate-spin" /> : <LogIn size={20} />}
+            {state.isLoading ? "Connecting..." : "Sign In with Asgardeo"}
           </button>
 
           <p className="text-xs text-zinc-500">

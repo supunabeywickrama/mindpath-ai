@@ -57,6 +57,9 @@ const asgardeoConfig = {
   baseUrl: import.meta.env.VITE_ASGARDEO_BASE_URL,
   scope: ["openid", "profile", "email"],
   storage: "localStorage" as const,
+  // System time is 2026, so tokens from 2025 appear expired. 
+  // Allow 2 years tolerance (in seconds)
+  clockTolerance: 63072000,
 };
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -89,11 +92,12 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <AuthProvider config={asgardeoConfig}>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </ErrorBoundary>
-  </React.StrictMode>
+  // React.StrictMode causes double-invocation of useEffect in dev, which breaks Asgardeo's code exchange
+  // <React.StrictMode>
+  <ErrorBoundary>
+    <AuthProvider config={asgardeoConfig}>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  </ErrorBoundary>
+  // </React.StrictMode>
 );

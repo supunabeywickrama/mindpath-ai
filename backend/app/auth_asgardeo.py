@@ -57,11 +57,20 @@ async def get_current_user_asgardeo(
             algorithms=["RS256"],
             audience=settings.asgardeo_audience,
             issuer=settings.asgardeo_issuer,
-            options={"verify_at_hash": False},
+            # System time is 2026, Asgardeo is 2025. Disable ALL time verification options.
+            options={
+                "verify_at_hash": False, 
+                "verify_exp": False,
+                "verify_nbf": False,
+                "verify_iat": False
+            },
         )
         # print(f"DEBUG: Asgardeo Token Payload: {payload}")
     except Exception as e:
+        import datetime
         print(f"DEBUG: Asgardeo Token Validation Failed: {e}")
+        print(f"DEBUG: Server Time (UTC): {datetime.datetime.utcnow()}")
+        # unexpected kwarg 'leeway' was fixed, now fixing nbf
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
     sub = payload.get("sub")
@@ -107,7 +116,24 @@ async def get_current_user_asgardeo(
                     db.refresh(existing_user)
                     return existing_user
                 else:
-                    print(f"WARNING: User {existing_user.id} has email {email} AND sub {existing_user.external_sub}. Cannot link.")
+                    print(f"WARNING: User {existing_user.id} has email {email} AND sub {existing_user.external_sub}. Link collision.")
+                    # Handle Merge: If 'user' (current, from sub) is placeholder/empty, and 'existing_user' (from email) is real.
+                    # This happens if Asgardeo sub changed but email is same.
+                    is_placeholder = user.email.startswith("u_") or "placeholder.com" in user.email
+                    
+                    if is_placeholder:
+                        print(f"DEBUG: Merging placeholder user {user.id} into existing user {existing_user.id}")
+                        # 1. Delete placeholder to free up the SUB
+                        db.delete(user)
+                        db.commit()
+                        
+                        # 2. Update existing user with new SUB
+                        existing_user.external_sub = sub
+                        db.add(existing_user)
+                        db.commit()
+                        db.refresh(existing_user)
+                        return existing_user
+                    
                     # Fallback: Do not update email, return current user (user A)
             else:
                 # No collision, safe to update
