@@ -5,6 +5,12 @@ MindPath is a **holistic mental wellness platform** designed to provide accessib
 > **⚠️ Disclaimer:** MindPath is a supportive tool and **NOT** a replacement for professional medical advice, diagnosis, or treatment. In case of emergency, please contact local authorities or a suicide prevention hotline.
 
 ---
+<p align="center">
+  <a href="https://drive.google.com/file/d/1ZElCsrx-4F7rzwymD67M92Vk95Cedxnd/view" target="_blank">
+    <img src="https://img.shields.io/badge/▶%20Watch%20Demo%20Video-4F46E5?style=for-the-badge&logo=google-drive&logoColor=white" />
+  </a>
+</p>
+
 
 ## 🌟 Key Features
 
